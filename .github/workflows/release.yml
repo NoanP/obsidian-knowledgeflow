@@ -1,0 +1,45 @@
+name: Check and release
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm run check
+      - run: npm test
+  release:
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: knowledgeflow-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish immutable BRAT release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p 'require("./manifest.json").version')
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release already exists; bump the version before releasing again."
+            exit 0
+          fi
+          python3 - "$VERSION" <<'PY' > release-notes.txt
+          import pathlib, sys
+          text = pathlib.Path('CHANGELOG.md').read_text()
+          heading = '## [' + sys.argv[1] + ']'
+          print(heading + text.split(heading, 1)[1].split('\n## [', 1)[0])
+          PY
+          gh release create "$VERSION" main.js manifest.json styles.css --target "$GITHUB_SHA" --title "KnowledgeFlow $VERSION" --notes-file release-notes.txt

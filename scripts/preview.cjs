@@ -1,0 +1,3 @@
+const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
+const root=path.resolve(__dirname,'..'),routes={'/':'preview/index.html','/host.js':'preview/host.js','/demo.js':'preview/demo.js','/main.js':'main.js','/styles.css':'styles.css'};
+http.createServer((req,res)=>{const file=routes[req.url];if(!file){res.writeHead(404);res.end('Not found');return;}res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':'text/html; charset=utf-8');res.setHeader('Cache-Control','no-store');res.end(fs.readFileSync(path.join(root,file)));}).listen(Number(process.env.KNOWLEDGEFLOW_PREVIEW_PORT||8765),'127.0.0.1',()=>console.log('Isolated in-memory preview: http://127.0.0.1:8765'));

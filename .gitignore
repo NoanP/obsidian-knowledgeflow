@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+.obsidian/
+KnowledgeFlow/
+TaskFlow/
+*.log
+coverage/
+release-notes.txt
