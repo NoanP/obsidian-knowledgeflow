@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-24
+
+### Changed
+- Implemented the approved cosmic homepage: quiet dark background, small translucent navigation tiles and daily welcome on the left, interactive 3D knowledge network on the right.
+- Added a local rotating daily thought and time-aware greeting in German and English. The thought is editorial guidance, not an AI assessment of private notes; no network calls or new stored data.
+- Added a decorative warm light core and subtle stars, reduced node sizes and showed sparse hub labels. Decorations never become notes, links or counts. Empty networks remain honestly empty.
+- Moved search, note selection and graph filters into a compact expandable explorer. Existing orbit, zoom, keyboard controls, neighborhood navigation and note opening remain available.
+- Added narrow-pane stacking and small-screen navigation. The homepage has a fixed dark presentation; other workspaces retain their existing preferences.
+
+### Validation
+- Automated checks and isolated in-memory preview; no Obsidian or TaskFlow installation changes. Native Obsidian/mobile interaction and production-scale performance remain separate validation tasks.
+
+
 ## [1.2.0] - 2026-11-24
 
 ### Changed

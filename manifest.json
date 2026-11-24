@@ -1,9 +1,9 @@
 {
   "id": "knowledgeflow",
   "name": "KnowledgeFlow",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "minAppVersion": "1.7.2",
-  "description": "Quellen, geprüftes Wissen, Projekte, Kanban und Kalender in einer lokalen Markdown-Arbeitszentrale.",
+  "description": "Quellen, gepr\u00fcftes Wissen, Projekte, Kanban und Kalender in einer lokalen Markdown-Arbeitszentrale.",
   "author": "NoanP",
   "authorUrl": "https://github.com/NoanP",
   "isDesktopOnly": false

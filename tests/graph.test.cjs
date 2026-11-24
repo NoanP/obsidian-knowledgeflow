@@ -46,7 +46,7 @@ test('homepage contains only the graph and eight navigation tiles, without daily
 });
 test('3D renderer selection, neighborhood navigation, orbit and cleanup work without data writes',()=>{
  const frames=new Map();let serial=0,draws=0,resizeRemoved=false;
- const context={setTransform(){},clearRect(){draws++},beginPath(){},moveTo(){},lineTo(){},stroke(){},arc(){},fill(){},createRadialGradient(){return {addColorStop(){}}},measureText(text){return {width:text.length*6}},strokeText(){},fillText(){}};
+ const context={save(){},restore(){},translate(){},rotate(){},ellipse(){},fillRect(){},setTransform(){},clearRect(){draws++},beginPath(){},moveTo(){},lineTo(){},stroke(){},arc(){},fill(){},createRadialGradient(){return {addColorStop(){}}},measureText(text){return {width:text.length*6}},strokeText(){},fillText(){}};
  const win={devicePixelRatio:1,requestAnimationFrame:fn=>{const id=++serial;frames.set(id,fn);return id;},cancelAnimationFrame:id=>frames.delete(id),addEventListener(){},removeEventListener(){resizeRemoved=true;},getComputedStyle:()=>({fontFamily:'system-ui',getPropertyValue:name=>name==='--kf-canvas'?'#222':'#ddd'})};
  const doc={defaultView:win};class Element{
   constructor(tag,o={}){this.tag=tag;this.options=o;this.children=[];this.ownerDocument=doc;this.isConnected=true;this.style={};this.value='';this.hidden=false;this.listeners={};}
@@ -58,4 +58,8 @@ test('3D renderer selection, neighborhood navigation, orbit and cleanup work wit
  const local=findButton('Umgebung');assert.equal(local.disabled,false);local.listeners.click();flush();assert.equal(view.kbGraphRoot,records[0].file.path);assert.ok(all().some(e=>e.text?.includes('2 Notizen')));
  const canvas=all().find(e=>e.tag==='canvas'),yaw=view.kbGraphCamera?.yaw||.35;canvas.onpointerdown({button:0,pointerId:1,clientX:20,clientY:20,shiftKey:false});canvas.onpointermove({pointerId:1,clientX:80,clientY:45});canvas.onpointerup({pointerId:1});flush();assert.notEqual(view.kbGraphCamera.yaw,yaw);assert.equal(writes,0);assert.equal(JSON.stringify(records),snapshot);
  canvas.onkeydown({key:'ArrowLeft',preventDefault(){}});assert.ok(frames.size>0);view.graphCleanup();assert.equal(frames.size,0);assert.equal(resizeRemoved,true);
+});
+
+test('daily welcome uses a stable local calendar day, changes each day and greets by time',()=>{
+ const morning=k.kbDailyWelcome(new Date(2026,10,24,8)),evening=k.kbDailyWelcome(new Date(2026,10,24,20)),next=k.kbDailyWelcome(new Date(2026,10,25,8));assert.equal(morning.thought,evening.thought);assert.notEqual(morning.thought,next.thought);assert.equal(morning.greeting,'Guten Morgen.');assert.equal(evening.greeting,'Guten Abend.');assert.ok(morning.thought.length>20);
 });

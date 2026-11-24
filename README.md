@@ -80,3 +80,7 @@ Edit `main.js`, `styles.css`, tests and docs here. Bump `manifest.json`, `packag
 - [QMD](https://github.com/tobi/qmd), a possible optional search integration, not bundled.
 
 MIT, copyright 2026 NoanP. TaskFlow's original MIT notice is retained in [LICENSE](LICENSE). No third-party article text, private vault contents or external project code is included.
+
+### Cosmic homepage (1.3)
+
+A local, time-aware welcome and daily thought sit beside eight small translucent navigation tiles. The real-coordinate 3D network occupies the right side, with a decorative warm core and background stars. These decorations do not represent records or create links. Expand **Netz erkunden / Explore network** for search, accessible note selection and graph filters. Drag to orbit, Shift-drag to pan and scroll to zoom; existing keyboard controls remain available. The home scene is deliberately dark, while other screens retain their existing appearance settings. Narrow panes stack the welcome above the graph. Daily task lists and statistics remain in their dedicated workspaces.

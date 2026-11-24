@@ -562,10 +562,24 @@ function kbFit3D(nodes,camera,width,height){
   return {...base,zoom,panX:-(left+right)/2*zoom,panY:-(top+bottom)/2*zoom};
 }
 function kbGraphHit(points,x,y){return [...points].filter(p=>p.visible&&Math.hypot(p.x-x,p.y-y)<=p.radius+6).sort((a,b)=>b.z-a.z)[0]||null;}
+function kbDailyWelcome(date=new Date()){
+  const day=Math.floor(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())/86400000),hour=date.getHours();
+  const thoughts=[['Verbinde heute zwei Gedanken, die bisher getrennt waren. Oft entsteht genau dort eine neue Idee.','Connect two thoughts that have been separate. A new idea often starts there.'],['Halte eine Erkenntnis in deinen eigenen Worten fest. Ein klarer Gedanke ist wertvoller als viele ungelesene Quellen.','Capture one insight in your own words. A clear thought is worth more than many unread sources.'],['Nimm dir eine offene Frage vor. Dein Wissensnetz darf mit Fragen wachsen.','Choose one open question. Let your knowledge network grow with questions.'],['Kehre zu einer älteren Notiz zurück. Vielleicht siehst du heute eine Verbindung, die dir damals fehlte.','Return to an older note. Today you may see a connection you missed before.'],['Gib einer guten Quelle einen Platz in deinem Wissen. Halte fest, warum sie für dich wichtig ist.','Give a useful source a place in your knowledge. Record why it matters to you.'],['Wähle einen kleinen nächsten Schritt für ein Projekt. Wissen wird durch Anwendung lebendig.','Choose a small next step for a project. Knowledge comes alive through use.'],['Lass Raum zum Nachdenken. Du musst nicht alles sammeln, um das Wesentliche zu behalten.','Make room to think. You do not have to collect everything to keep what matters.']];
+  return {greeting:hour<11?kl('Guten Morgen.','Good morning.'):hour<18?kl('Guten Tag.','Good afternoon.'):kl('Guten Abend.','Good evening.'),thought:kl(...thoughts[((day%thoughts.length)+thoughts.length)%thoughts.length])};
+}
+function kbDrawCosmos(ctx,width,height){
+  ctx.save();
+  // Decorative stars and light core are not records and never create graph edges.
+  for(let i=0;i<120;i++){const x=((i*7919+1237)%10007)/10007*width,y=((i*3571+719)%9973)/9973*height;ctx.globalAlpha=.08+(i%5)*.035;ctx.fillStyle='#d6d1c9';ctx.beginPath();ctx.arc(x,y,i%9===0?1:.55,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;const x=width*.5,y=height*.51,scale=Math.min(width,height)/580,r=30*scale;
+  const glow=ctx.createRadialGradient(x,y,0,x,y,170*scale);glow.addColorStop(0,'#e8bd7838');glow.addColorStop(.4,'#b38b5613');glow.addColorStop(1,'#b38b5600');ctx.fillStyle=glow;ctx.fillRect(x-170*scale,y-170*scale,340*scale,340*scale);
+  ctx.translate(x,y);ctx.rotate(-.32);ctx.shadowColor='#efd5a1';ctx.shadowBlur=14*scale;ctx.strokeStyle='#d8b98966';ctx.lineWidth=2*scale;ctx.beginPath();ctx.ellipse(0,0,112*scale,16*scale,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=10*scale;ctx.fillStyle='#07080b';ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#f2dbb4bd';ctx.lineWidth=2*scale;ctx.stroke();ctx.shadowBlur=7*scale;ctx.strokeStyle='#ffebcba6';ctx.lineWidth=1.5*scale;ctx.beginPath();ctx.ellipse(0,0,112*scale,11*scale,0,0,Math.PI);ctx.stroke();ctx.restore();
+}
 function renderKnowledgeGraph(view,parent){
-  const doc=parent.ownerDocument,win=doc.defaultView,base=kbGraph(view.plugin.knowledge||[],{sources:view.kbGraphSources!==false,limit:500}),section=parent.createEl('section',{cls:'kf-graph3d',attr:{'aria-label':kl('Dreidimensionales Wissensnetz','Three-dimensional knowledge network')}}),heading=section.createDiv({cls:'kf-graph3d-heading'});
+  const doc=parent.ownerDocument,win=doc.defaultView,base=kbGraph(view.plugin.knowledge||[],{sources:view.kbGraphSources!==false,limit:500}),section=parent.createEl('section',{cls:'kf-graph3d',attr:{'aria-label':kl('Dreidimensionales Wissensnetz','Three-dimensional knowledge network')}});
+  const tools=section.createEl('details',{cls:'kf-cosmic-tools'});tools.createEl('summary',{text:kl('Netz erkunden','Explore network')});const heading=tools.createDiv({cls:'kf-graph3d-heading'});
   heading.createEl('h1',{text:kl('Dein Wissensnetz','Your knowledge network')});heading.createSpan({text:'3D',cls:'kf-graph3d-badge'});button(heading,kl('Wissen & Quellen →','Knowledge & sources →'),()=>view.openKnowledge(),'kf-text-button');
-  const toolbar=section.createDiv({cls:'kf-graph3d-toolbar'}),search=toolbar.createEl('input',{type:'search',placeholder:kl('Wissen suchen …','Search knowledge …'),attr:{'aria-label':kl('Wissensnetz durchsuchen','Search knowledge network')}});search.value=view.kbGraphQuery||'';
+  const toolbar=tools.createDiv({cls:'kf-graph3d-toolbar'}),search=toolbar.createEl('input',{type:'search',placeholder:kl('Wissen suchen …','Search knowledge …'),attr:{'aria-label':kl('Wissensnetz durchsuchen','Search knowledge network')}});search.value=view.kbGraphQuery||'';
   const picker=toolbar.createEl('select',{attr:{'aria-label':kl('Notiz auswählen','Choose a note')}}),filters=toolbar.createEl('details',{cls:'kf-graph3d-filters'});filters.createEl('summary',{text:kl('Ansicht & Filter','View & filters')});const filterBody=filters.createDiv();
   const toggle=(text,checked,change)=>{const label=filterBody.createEl('label',{cls:'kf-kb-check'}),input=label.createEl('input',{type:'checkbox'});input.checked=checked;label.createSpan({text});input.onchange=()=>change(input.checked);return input;};
   toggle(kl('Quellen anzeigen','Show sources'),view.kbGraphSources!==false,value=>{view.kbGraphSources=value;view.render();});toggle(kl('Unverknüpfte Notizen','Unlinked notes'),view.kbGraphOrphans!==false,value=>{view.kbGraphOrphans=value;rebuild();});toggle(kl('Beschriftungen anzeigen','Show labels'),!!view.kbGraphLabels,value=>{view.kbGraphLabels=value;schedule();});
@@ -595,14 +609,14 @@ function renderKnowledgeGraph(view,parent){
   }
   function draw(){
     if(closed||!ctx||!canvas.isConnected)return;const rect=stage.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const dpr=Math.min(2,win.devicePixelRatio||1);if(width!==rect.width||height!==rect.height){width=rect.width;height=rect.height;if(!interacted)camera=kbFit3D(positions,camera,width,height);}
-    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);if(canvas.width!==pixelWidth||canvas.height!==pixelHeight){canvas.width=pixelWidth;canvas.height=pixelHeight;}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);if(canvas.width!==pixelWidth||canvas.height!==pixelHeight){canvas.width=pixelWidth;canvas.height=pixelHeight;}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);kbDrawCosmos(ctx,width,height);
     const style=win.getComputedStyle(section),ink=style.getPropertyValue('--kf-ink').trim()||'#dedede',quiet=style.getPropertyValue('--kf-quiet').trim()||'#aaa',surface=style.getPropertyValue('--kf-canvas').trim()||'#222',nodeMap=new Map(graph.nodes.map(n=>[n.id,n])),neighbors=new Set([selected||hovered]);for(const e of graph.edges){if(e.source===(selected||hovered))neighbors.add(e.target);if(e.target===(selected||hovered))neighbors.add(e.source);}
-    projected=positions.map(p=>{const n=nodeMap.get(p.id),q=kbProject3D(p,camera,width,height);return {...q,id:p.id,title:n.title,kind:n.kind,radius:Math.max(3,Math.min(22,(4+Math.sqrt(n.degree)*1.2)*q.scale))};});const byId=new Map(projected.map(p=>[p.id,p]));
+    projected=positions.map(p=>{const n=nodeMap.get(p.id),q=kbProject3D(p,camera,width,height);return {...q,id:p.id,title:n.title,kind:n.kind,radius:Math.max(3,Math.min(22,(1.8+Math.sqrt(n.degree)*.8)*q.scale))};});const byId=new Map(projected.map(p=>[p.id,p]));
     for(const e of graph.edges){const a=byId.get(e.source),b=byId.get(e.target);if(!a?.visible||!b?.visible)continue;const highlight=(selected||hovered)&&(e.source===(selected||hovered)||e.target===(selected||hovered));ctx.globalAlpha=highlight ? .7 : (selected||hovered) ? .06 : Math.max(.08,Math.min(.35,.2+(a.z+b.z)/1800));ctx.strokeStyle=highlight?ink:quiet;ctx.lineWidth=highlight?1.4:.7;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
-    ctx.font='12px '+(style.fontFamily||'system-ui');ctx.textAlign='center';const labelBoxes=[];
+    const narrowHub=p=>nodeMap.get(p.id).degree>=3;ctx.font='12px '+(style.fontFamily||'system-ui');ctx.textAlign='center';const labelBoxes=[];
     for(const p of [...projected].sort((a,b)=>a.z-b.z)){if(!p.visible||p.x<-40||p.x>width+40||p.y<-40||p.y>height+40)continue;const primary=p.id===selected||p.id===hovered,dim=(selected||hovered)&&!neighbors.has(p.id);ctx.globalAlpha=dim ? .15 : Math.max(.3,Math.min(1,.7+p.z/800));
       ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);if(p.kind==='source'){ctx.fillStyle=surface;ctx.fill();ctx.strokeStyle=primary?ink:quiet;ctx.lineWidth=primary?2:1.5;ctx.stroke();}else{const gradient=ctx.createRadialGradient(p.x-p.radius*.35,p.y-p.radius*.35,p.radius*.12,p.x,p.y,p.radius);gradient.addColorStop(0,ink);gradient.addColorStop(1,quiet);ctx.fillStyle=gradient;ctx.fill();if(primary){ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke();}}
-      if(primary||(view.kbGraphLabels&&!dim&&p.z>-80&&labelBoxes.length<40)){const label=p.title.length>36?p.title.slice(0,33)+'…':p.title,w=ctx.measureText(label).width,box={x:p.x-w/2,y:p.y-p.radius-20,w,h:16};if(primary||!labelBoxes.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y)){labelBoxes.push(box);ctx.globalAlpha=1;ctx.lineWidth=4;ctx.strokeStyle=surface;ctx.strokeText(label,p.x,p.y-p.radius-8);ctx.fillStyle=ink;ctx.fillText(label,p.x,p.y-p.radius-8);}}
+      if(primary||((view.kbGraphLabels||narrowHub(p))&&!dim&&p.z>-80&&labelBoxes.length<18)){const label=p.title.length>36?p.title.slice(0,33)+'…':p.title,w=ctx.measureText(label).width,box={x:p.x-w/2,y:p.y-p.radius-20,w,h:16};if(primary||!labelBoxes.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y)){labelBoxes.push(box);ctx.globalAlpha=1;ctx.lineWidth=4;ctx.strokeStyle=surface;ctx.strokeText(label,p.x,p.y-p.radius-8);ctx.fillStyle=ink;ctx.fillText(label,p.x,p.y-p.radius-8);}}
     }ctx.globalAlpha=1;
   }
   search.oninput=e=>{view.kbGraphQuery=search.value;clearTimeout(timer);if(!e.isComposing)timer=setTimeout(rebuild,150);};picker.onchange=()=>select(picker.value);
@@ -1133,12 +1147,18 @@ class TaskView extends ItemView {
   filterValues(){return filterSnapshot({project:this.projectFilter,query:this.query,tag:this.tag,status:this.statusFilter,priority:this.priorityFilter,due:this.dueFilter});}
   applyFilter(preset){this.boardMode='tasks';const f=filterSnapshot(preset.filters);this.query=f.query;this.projectFilter=f.project;this.tag=f.tag;this.statusFilter=f.status;this.priorityFilter=f.priority;this.dueFilter=f.due;this.currentPreset=preset.id;if(this.mode==='home')this.mode='board';this.render();}
   renderHome(c,tasks,presets){
-    const layout=c.createDiv({cls:'kf-network-home-layout'});renderKnowledgeGraph(this,layout);
-    const actions=layout.createEl('nav',{cls:'kf-network-actions',attr:{'aria-label':tr('Schnellzugriff')}});
+    const layout=c.createDiv({cls:'kf-network-home-layout'}),side=layout.createEl('aside',{cls:'kf-cosmic-sidebar'});
+    const brand=side.createDiv({cls:'kf-cosmic-brand'});brand.createSpan({text:'KnowledgeFlow'});brand.createEl('small',{text:kl('Dein Second Brain','Your Second Brain')});
+    const now=new Date(),welcome=kbDailyWelcome(now);side.createEl('h1',{text:welcome.greeting,cls:'kf-cosmic-greeting'});side.createEl('p',{text:now.toLocaleDateString(uiLocale(),{weekday:'long',day:'numeric',month:'long'}),cls:'kf-cosmic-date'});
+    side.createEl('h2',{text:kl('Ein Gedanke für heute','A thought for today'),cls:'kf-cosmic-eyebrow'});side.createEl('p',{text:welcome.thought,cls:'kf-cosmic-thought'});
+    const actions=side.createEl('nav',{cls:'kf-network-actions',attr:{'aria-label':tr('Schnellzugriff')}});
     for(const key of ['board','calendar','projects','series','stats','archive','trash','settings']){
       const destination=HOME_DESTINATIONS[key],tile=button(actions,'',()=>this.openHomeDestination(key),'kf-network-tile');tile.setAttribute('aria-label',(uiLanguage==='en'?'Open '+tr(destination.label):destination.label+tr(' öffnen')));tile.setAttribute('title',tr(destination.description));
       const icon=tile.createSpan({cls:'kf-network-tile-icon',attr:{'aria-hidden':'true'}});if(typeof setIcon==='function')setIcon(icon,destination.icon);tile.createSpan({text:tr(destination.label)});
     }
+    button(side,kl('Wissen & Quellen →','Knowledge & sources →'),()=>this.openKnowledge(),'kf-cosmic-knowledge');
+    side.createEl('p',{text:kl('Ein ruhiger Ort für klare Gedanken.','A quiet place for clear thoughts.'),cls:'kf-cosmic-caption'});
+    renderKnowledgeGraph(this,layout);
   }
 
   goHome(){this.mode='home';this.showArchive=false;this.archiveMode='tasks';this.boardMode='tasks';this.plannerMode='agenda';this.seriesQuery='';this.resetFilters();this.contentEl.scrollTop=0;}
@@ -1694,3 +1714,5 @@ Object.assign(module.exports.testing,{kbGraph,kbGraphExplore,kbGraphLayout3D,kbP
 
 
 Object.assign(module.exports.testing,{renderKnowledgeGraph});
+
+Object.assign(module.exports.testing,{kbDailyWelcome,kbDrawCosmos});
