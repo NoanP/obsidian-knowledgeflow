@@ -54,3 +54,9 @@ The isolated browser host successfully exercises two selected synthetic notes (o
 A fixed synthetic set has 10 relevant queries with the expected topic in the first three passages and two absent-topic queries with no passages. This is an authored regression fixture, not an independent real-vault benchmark.
 
 The isolated browser preview verifies the question tab, two actual matching excerpts, separate title discovery, recorded source links, exact passage inspection, opening the correct note and source snapshot, and explicit no-evidence handling for an unrelated question. All examples remain in memory. Native Obsidian/new-tab behavior, mobile layout and real-vault retrieval quality remain unverified; no installation or real vault is used.
+
+## Knowledge quality candidates (1.7)
+
+230 automated tests pass. Quality coverage includes missing/ambiguous Wiki and Markdown links, conservative path resolution, encoded/dotted/Unicode names, owned headings/block IDs, metadata-only outside targets and attachments, masks/escaping, structured references, non-published targets and preserved same-title review. Similarity tests verify both excerpts, short-text exclusion, linked copies and bounded common passages. Statement tests verify opposing permission/numeric patterns, equivalent units and exclusions for different context, questions, quotes, code, hypothetical text, chats and explicit source revisions. Reports remain read-only and stale references are rejected.
+
+The isolated browser preview confirms two possible permission/timeout conflicts, two missing targets/headings and a near-copy pair. Category filtering, two-sided exact evidence, readable comparisons and opening the correct owning note all succeed with synthetic in-memory data. The feature does not claim unrestricted semantic contradiction detection, full native Obsidian link semantics, real-vault precision or exhaustive checking. No real Obsidian session is used.

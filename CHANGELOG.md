@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-24
+
+### Added
+- Read-only knowledge quality report under Knowledge & sources → Health, with manual checks, category filtering, candidate counts, bounded pagination and scope disclosures.
+- Missing/ambiguous source and page references, Wiki/Markdown file targets, owned heading/block references and explicit unverified/external cases. Code, comments, generated links and escaped examples are excluded.
+- Similar-passage candidates based on shared five-word sequences, with exact pinned excerpts from both records. Related note/source copies and explicit source revisions are labelled separately.
+- Possible conflicts for narrow opposite-status and numeric templates with matching recognized project/area/heading/condition context. Both statements remain visible; no winner is chosen.
+- Freshness checks for collection/catalog changes and file hashes before evidence inspection/opening. Outside link targets use filename metadata only, without reading unimported note content.
+
+### Boundaries and validation
+- Possible conflicts are review candidates, not semantic contradiction or truth judgments. Chats, arbitrary paraphrases and unsupported numeric/unit forms are not automatically classified as contradictory.
+- 230 automated tests cover link parsing/resolution, protected outside content, exact evidence, similar copies, contradictory/same-context patterns, conservative exclusions, versions, stale reports and explicit bounds.
+- Isolated browser verification confirms category filters, paired conflict/similarity excerpts, broken-link evidence and opening the correct owning note with synthetic in-memory data.
+- No automatic repairs, merges, edits, external calls or persisted quality reports. Existing missing-source, same-title and ambiguous-claim checks remain available.
+- Repository-only release: TaskFlow and Obsidian remain unchanged. Native Obsidian/mobile semantics and real-vault precision require a later explicitly authorized pilot.
+
+
 ## [1.6.0] - 2026-11-24
 
 ### Added

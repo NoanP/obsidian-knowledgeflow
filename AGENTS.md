@@ -37,3 +37,9 @@ against its pinned full-record hash and exact section offsets. Recorded source l
 are not automatic claim-level support. Never fabricate a synthesis, certainty score,
 semantic contradiction detection or citation. Search only owned published pages and
 valid source snapshots; disclose index limits and preserve active chat-branch scope.
+
+Quality reports are local and read-only. Similarity means measured shared word sequences,
+not semantic equivalence. Opposite-rule/numeric templates may produce possible-conflict
+candidates only, with both exact passages and context. Never label them confirmed
+contradictions, merge content, repair links or choose a winning source automatically.
+External link targets may use file metadata; never read unimported note bodies.
