@@ -533,52 +533,89 @@ function kbGraph(records,{sources=true,limit=180}={}){
   const visibleDegree=new Map(chosen.map(r=>[r.file.path,0]));for(const e of visibleEdges){visibleDegree.set(e.source,visibleDegree.get(e.source)+1);visibleDegree.set(e.target,visibleDegree.get(e.target)+1);}
   return {nodes:chosen.map(record=>({id:record.file.path,title:record.meta.title,kind:record.meta.kind,degree:visibleDegree.get(record.file.path),record})),edges:visibleEdges,totalNodes:eligible.length,totalEdges:edges.size,omitted:eligible.length-chosen.length};
 }
-function kbGraphLayout(graph,width=1000,height=460){
-  const hash=s=>{let h=2166136261;for(const ch of s)h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;},n=graph.nodes.length;
-  if(!n)return [];
-  const nodes=graph.nodes.map(node=>{const h=hash(node.id),a=(h%6283)/1000,r=40+((h>>>10)%100)/100*Math.min(width,height)*.36;return {...node,x:width/2+Math.cos(a)*r,y:height/2+Math.sin(a)*r};}),index=new Map(nodes.map((v,i)=>[v.id,i])),forces=nodes.map(()=>({x:0,y:0}));
-  for(let step=0;step<100;step++){
-    for(let i=0;i<n;i++){forces[i].x=(width/2-nodes[i].x)*.016;forces[i].y=(height/2-nodes[i].y)*.016;}
-    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){let dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;if(Math.abs(dx)+Math.abs(dy)<.01){dx=1;dy=.5;}const d2=Math.max(70,dx*dx+dy*dy),f=850/d2;forces[i].x+=dx*f;forces[i].y+=dy*f;forces[j].x-=dx*f;forces[j].y-=dy*f;}
-    for(const edge of graph.edges){const i=index.get(edge.source),j=index.get(edge.target),dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,d=Math.max(1,Math.hypot(dx,dy)),f=(d-70)*.035;forces[i].x+=dx/d*f;forces[i].y+=dy/d*f;forces[j].x-=dx/d*f;forces[j].y-=dy/d*f;}
-    const speed=1-step/140;for(let i=0;i<n;i++){nodes[i].x=Math.max(26,Math.min(width-26,nodes[i].x+Math.max(-12,Math.min(12,forces[i].x))*speed));nodes[i].y=Math.max(26,Math.min(height-26,nodes[i].y+Math.max(-12,Math.min(12,forces[i].y))*speed));}
-  }
-  return nodes;
+function kbGraphExplore(graph,{query='',orphans=true,edgeType='',root='',depth=1,limit=240}={}){
+  const terms=searchText(query).trim().split(/\s+/).filter(Boolean),matches=node=>terms.every(term=>searchText([node.title,node.record.body,node.record.meta.area,...(node.record.meta.tags||[])].join(' ')).includes(term));
+  let edges=graph.edges.filter(e=>!edgeType||e.types.includes(edgeType)),allowed=new Set(graph.nodes.map(n=>n.id));
+  if(root){allowed=new Set(graph.nodes.some(n=>n.id===root)?[root]:[]);let frontier=new Set(allowed);for(let level=0;level<Math.max(1,Math.min(3,depth));level++){const next=new Set();for(const e of edges){if(frontier.has(e.source)&&!allowed.has(e.target))next.add(e.target);if(frontier.has(e.target)&&!allowed.has(e.source))next.add(e.source);}for(const id of next)allowed.add(id);frontier=next;}}
+  const linked=new Set(edges.flatMap(e=>[e.source,e.target]));let candidates=graph.nodes.filter(n=>allowed.has(n.id)&&matches(n)&&(orphans||linked.has(n.id)));
+  const beforeCap=candidates.length;candidates=candidates.slice(0,Math.max(1,Math.min(500,limit)));const ids=new Set(candidates.map(n=>n.id));edges=edges.filter(e=>ids.has(e.source)&&ids.has(e.target));
+  const degrees=new Map(candidates.map(n=>[n.id,0]));for(const e of edges){degrees.set(e.source,degrees.get(e.source)+1);degrees.set(e.target,degrees.get(e.target)+1);}
+  return {nodes:candidates.map(n=>({...n,degree:degrees.get(n.id)})),edges,totalNodes:graph.totalNodes,totalEdges:graph.totalEdges,filtered:beforeCap,omitted:beforeCap-candidates.length,baseOmitted:graph.omitted||0};
 }
-function kbGraphFit(nodes,width=1000,height=460){if(!nodes.length)return {x:0,y:0,scale:1};const xs=nodes.map(n=>n.x),ys=nodes.map(n=>n.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys),scale=Math.min(4,(width-100)/Math.max(80,right-left),(height-100)/Math.max(80,bottom-top));return {x:width/2-(left+right)/2*scale,y:height/2-(top+bottom)/2*scale,scale};}
+function kbGraphLayout3D(graph){
+  const hash=s=>{let h=2166136261;for(const ch of s)h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;},n=graph.nodes.length;if(!n)return [];
+  const nodes=graph.nodes.map(node=>{const h=hash(node.id),a=(h%6283)/1000,b=((h>>>12)%6283)/1000,r=100+(h%120);return {id:node.id,x:Math.cos(a)*Math.sin(b)*r,y:Math.cos(b)*r,z:Math.sin(a)*Math.sin(b)*r};}),index=new Map(nodes.map((v,i)=>[v.id,i])),forces=nodes.map(()=>({x:0,y:0,z:0}));
+  for(let step=0;step<90;step++){
+    for(let i=0;i<n;i++){forces[i].x=-nodes[i].x*.012;forces[i].y=-nodes[i].y*.012;forces[i].z=-nodes[i].z*.012;}
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){let dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y,dz=nodes[i].z-nodes[j].z;if(Math.abs(dx)+Math.abs(dy)+Math.abs(dz)<.01){dx=1;dy=.5;dz=.3;}const d2=Math.max(80,dx*dx+dy*dy+dz*dz),f=1000/d2;forces[i].x+=dx*f;forces[i].y+=dy*f;forces[i].z+=dz*f;forces[j].x-=dx*f;forces[j].y-=dy*f;forces[j].z-=dz*f;}
+    for(const edge of graph.edges){const i=index.get(edge.source),j=index.get(edge.target);if(i===undefined||j===undefined)continue;const dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,dz=nodes[j].z-nodes[i].z,d=Math.max(1,Math.hypot(dx,dy,dz)),f=(d-80)*.035;forces[i].x+=dx/d*f;forces[i].y+=dy/d*f;forces[i].z+=dz/d*f;forces[j].x-=dx/d*f;forces[j].y-=dy/d*f;forces[j].z-=dz/d*f;}
+    for(let i=0;i<n;i++)for(const axis of ['x','y','z'])nodes[i][axis]=Math.max(-300,Math.min(300,nodes[i][axis]+Math.max(-10,Math.min(10,forces[i][axis]))*(1-step/130)));
+  }
+  const center={x:0,y:0,z:0};for(const node of nodes)for(const axis of ['x','y','z'])center[axis]+=node[axis]/n;let radius=1;for(const node of nodes){for(const axis of ['x','y','z'])node[axis]-=center[axis];radius=Math.max(radius,Math.hypot(node.x,node.y,node.z));}for(const node of nodes)for(const axis of ['x','y','z'])node[axis]*=230/radius;return nodes;
+}
+function kbProject3D(point,camera,width,height){
+  const x=point.x-(camera.target?.x||0),y=point.y-(camera.target?.y||0),z=point.z-(camera.target?.z||0),cy=Math.cos(camera.yaw||0),sy=Math.sin(camera.yaw||0),cp=Math.cos(camera.pitch||0),sp=Math.sin(camera.pitch||0),xx=x*cy+z*sy,z1=-x*sy+z*cy,yy=y*cp-z1*sp,zz=y*sp+z1*cp,distance=650-zz,scale=Math.min(width,height)/500*(camera.zoom||1)*500/Math.max(20,distance);
+  return {x:width/2+(camera.panX||0)+xx*scale,y:height/2+(camera.panY||0)+yy*scale,z:zz,scale,visible:distance>20};
+}
+function kbFit3D(nodes,camera,width,height){
+  const base={...camera,zoom:1,panX:0,panY:0,target:{x:0,y:0,z:0}};if(!nodes.length)return {...base,zoom:1};const points=nodes.map(n=>kbProject3D(n,base,width,height)),xs=points.map(p=>p.x-width/2),ys=points.map(p=>p.y-height/2),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys),zoom=Math.max(.35,Math.min(6,(width-90)/Math.max(70,right-left),(height-100)/Math.max(70,bottom-top)));
+  return {...base,zoom,panX:-(left+right)/2*zoom,panY:-(top+bottom)/2*zoom};
+}
+function kbGraphHit(points,x,y){return [...points].filter(p=>p.visible&&Math.hypot(p.x-x,p.y-y)<=p.radius+6).sort((a,b)=>b.z-a.z)[0]||null;}
 function renderKnowledgeGraph(view,parent){
-  const graph=kbGraph(view.plugin.knowledge||[],{sources:view.kbGraphSources!==false}),section=parent.createEl('section',{cls:'kf-graph-section',attr:{'aria-label':kl('Wissensnetz','Knowledge network')}}),header=section.createDiv({cls:'kf-graph-header'}),heading=header.createDiv();
-  heading.createEl('h2',{text:kl('Dein Wissensnetz','Your knowledge network')});heading.createEl('p',{text:kl('Notizen und ihre echten Verbindungen. Wähle einen Knoten, um seine Nachbarn zu entdecken.','Notes and their real connections. Select a node to explore its neighbors.'),cls:'kf-muted'});
-  const toolbar=section.createDiv({cls:'kf-graph-toolbar'}),search=toolbar.createEl('input',{type:'search',placeholder:kl('Notiz im Netz finden …','Find a note in the network …'),attr:{'aria-label':kl('Notiz im Netz finden','Find a note in the network')}});search.value=view.kbGraphQuery||'';
-  const showSources=toolbar.createEl('label',{cls:'kf-kb-check'}),check=showSources.createEl('input',{type:'checkbox'});check.checked=view.kbGraphSources!==false;showSources.createSpan({text:kl('Quellen anzeigen','Show sources')});check.onchange=()=>{view.kbGraphSources=check.checked;view.render();};
-  const expand=button(header,view.kbGraphExpanded?kl('Kompakter','Compact'):kl('Vergrößern','Expand'),()=>{view.kbGraphExpanded=!view.kbGraphExpanded;section.classList.toggle('is-expanded',view.kbGraphExpanded);expand.setText(view.kbGraphExpanded?kl('Kompakter','Compact'):kl('Vergrößern','Expand'));expand.setAttribute('aria-expanded',String(!!view.kbGraphExpanded));},'kf-text-button');expand.setAttribute('aria-expanded',String(!!view.kbGraphExpanded));section.classList.toggle('is-expanded',!!view.kbGraphExpanded);
-  const count=section.createEl('p',{cls:'kf-graph-count',attr:{role:'status'}});count.setText(graph.nodes.length+kl(' Notizen · ',' notes · ')+graph.edges.length+kl(' Verbindungen',' connections')+(graph.omitted?' · '+graph.omitted+kl(' weitere Notizen; angezeigt werden die am stärksten verknüpften.',' more notes; showing the most connected.') :''));
-  if(!graph.nodes.length){section.createDiv({cls:'kf-graph-empty',text:kl('Dein Wissensnetz wächst mit deinen Quellen und freigegebenen Notizen. Verknüpfe Seiten oder hinterlege Quellen, damit Verbindungen sichtbar werden.','Your network grows with your sources and published notes. Link pages or add source references to reveal connections.')});button(section,kl('Wissen & Quellen öffnen →','Open knowledge & sources →'),()=>view.openKnowledge(),'kf-text-button');return;}
-  const layoutKey=JSON.stringify([graph.nodes.map(n=>[n.id,n.title]),graph.edges]);if(view.kbGraphCache?.key!==layoutKey)view.kbGraphCache={key:layoutKey,nodes:kbGraphLayout(graph)};
-  const cached=new Map(view.kbGraphCache.nodes.map(n=>[n.id,{x:n.x,y:n.y}])),positions=graph.nodes.map(n=>({...n,...cached.get(n.id)})),byId=new Map(positions.map(n=>[n.id,n])),body=section.createDiv({cls:'kf-graph-body'}),stage=body.createDiv({cls:'kf-graph-stage'}),svg=svgElement(stage,'svg',{viewBox:'0 0 1000 460',role:'group','aria-label':kl('Interaktives Wissensnetz: Knoten auswählen, Hintergrund ziehen. Zoom mit den Tasten.','Interactive knowledge network: select nodes, drag the background. Use buttons to zoom.'),tabindex:'0'}),scene=svgElement(svg,'g'),edgeEls=[],nodeEls=[];
-  const detail=body.createEl('aside',{cls:'kf-graph-detail',attr:{'aria-label':kl('Notizdetails','Note details'),'aria-live':'polite'}});
-  const fitted=kbGraphFit(positions);let transform=view.kbGraphTransform?.key===layoutKey?{...view.kbGraphTransform}:{...fitted},selected=view.kbGraphSelected&&byId.has(view.kbGraphSelected)?view.kbGraphSelected:'',drag=null;
-  const applyTransform=()=>{scene.setAttribute('transform',`translate(${transform.x} ${transform.y}) scale(${transform.scale})`);view.kbGraphTransform={...transform,key:layoutKey};};
-  const zoom=factor=>{const old=transform.scale,next=Math.max(.4,Math.min(4,old*factor));transform.x=500-(500-transform.x)*next/old;transform.y=230-(230-transform.y)*next/old;transform.scale=next;applyTransform();};
-  const controls=stage.createDiv({cls:'kf-graph-zoom'});button(controls,'+',()=>zoom(1.25),'kf-text-button').setAttribute('aria-label',kl('Netz vergrößern','Zoom in'));button(controls,'−',()=>zoom(.8),'kf-text-button').setAttribute('aria-label',kl('Netz verkleinern','Zoom out'));button(controls,kl('Zentrieren','Reset view'),()=>{transform={...fitted};applyTransform();},'kf-text-button');
-  for(const edge of graph.edges){const a=byId.get(edge.source),b=byId.get(edge.target),line=svgElement(scene,'line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'kf-graph-edge'});edgeEls.push({edge,line});}
-  const update=()=>{
-    const query=searchText(search.value.trim()),neighbors=new Set([selected]);for(const e of graph.edges)if(e.source===selected)neighbors.add(e.target);else if(e.target===selected)neighbors.add(e.source);
-    for(const {node,group}of nodeEls){const match=!query||searchText(node.title).includes(query);group.classList.toggle('is-muted',!match||(!!selected&&!neighbors.has(node.id)));group.classList.toggle('is-selected',node.id===selected);group.setAttribute('aria-pressed',String(node.id===selected));}
-    for(const {edge,line}of edgeEls){line.classList.toggle('is-neighbor',!!selected&&(edge.source===selected||edge.target===selected));line.classList.toggle('is-muted',!!selected&&edge.source!==selected&&edge.target!==selected);}
-    detail.empty();const node=byId.get(selected);if(node){detail.createSpan({text:kbLabel(node.kind),cls:'kf-eyebrow'});detail.createEl('h3',{text:node.title});detail.createEl('p',{text:node.degree+kl(' sichtbare Verbindungen',' visible connections')});detail.createEl('p',{text:kbExcerpt(node.record.body)});button(detail,kl('Notiz öffnen','Open note'),()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file),'kf-primary');const adjacent=graph.nodes.filter(n=>neighbors.has(n.id)&&n.id!==selected);if(adjacent.length)detail.createEl('h4',{text:kl('Verknüpfte Notizen','Connected notes')});for(const n of adjacent)button(detail,n.title,()=>{selected=n.id;view.kbGraphSelected=selected;update();},'kf-text-button');button(detail,kl('Auswahl aufheben','Clear selection'),()=>{selected='';view.kbGraphSelected='';update();},'kf-text-button');}
-    else{detail.createEl('h3',{text:kl('Gedanken entdecken','Explore ideas')});detail.createEl('p',{text:kl('Große Knoten haben mehr Verbindungen. Gefüllte Punkte sind Wissensseiten, Ringe sind Quellen. Ein Klick zeigt Details, ein Doppelklick öffnet die Notiz.','Larger nodes have more connections. Filled dots are knowledge pages; rings are sources. Click for details, double-click to open a note.')});}
-    const matches=graph.nodes.filter(n=>!query||searchText(n.title).includes(query));picker.empty();picker.createEl('option',{value:'',text:kl('Notiz auswählen …','Choose a note …')});for(const node of matches)picker.createEl('option',{value:node.id,text:node.title});picker.value=matches.some(n=>n.id===selected)?selected:'';if(query)detail.createEl('p',{text:matches.length+kl(' passende Notizen im sichtbaren Netz.',' matching notes in the visible network.')});
-  };
-  const picker=toolbar.createEl('select',{attr:{'aria-label':kl('Notiz im Netz auswählen','Select a note in the network')}});picker.onchange=()=>{selected=picker.value;view.kbGraphSelected=selected;update();};search.oninput=()=>{view.kbGraphQuery=search.value;update();};
-  for(const node of positions){const group=svgElement(scene,'g',{class:'kf-graph-node'+(node.kind==='source'?' is-source':''),transform:`translate(${node.x} ${node.y})`,role:'button',tabindex:'0','aria-label':node.title+' · '+node.degree+kl(' Verbindungen',' connections'),'aria-pressed':'false'});svgElement(group,'circle',{r:Math.min(16,5+Math.sqrt(node.degree)*2)});svgElement(group,'circle',{r:22,class:'kf-graph-hit'});const label=svgElement(group,'text',{y:-22,'text-anchor':'middle'});label.textContent=node.title.length>35?node.title.slice(0,32)+'…':node.title;svgElement(group,'title').textContent=node.title;
-    group.onclick=()=>{selected=node.id;view.kbGraphSelected=selected;update();};group.ondblclick=()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file);group.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();selected=node.id;view.kbGraphSelected=selected;update();}};nodeEls.push({node,group});}
-  svg.onpointerdown=e=>{if(e.button!==0||e.target.closest('.kf-graph-node'))return;const matrix=svg.getScreenCTM();if(!matrix)return;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const local=point.matrixTransform(matrix.inverse());drag={id:e.pointerId,x:local.x,y:local.y,tx:transform.x,ty:transform.y};svg.setPointerCapture(e.pointerId);};
-  svg.onpointermove=e=>{if(!drag||e.pointerId!==drag.id)return;const matrix=svg.getScreenCTM();if(!matrix)return;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const local=point.matrixTransform(matrix.inverse());transform.x=drag.tx+local.x-drag.x;transform.y=drag.ty+local.y-drag.y;applyTransform();};
-  svg.onpointerup=svg.onpointercancel=()=>{drag=null;};svg.onlostpointercapture=()=>{drag=null;};
-  svg.onkeydown=e=>{if(['+','=','-','0','Escape'].includes(e.key)){e.preventDefault();if(e.key==='+'||e.key==='=')zoom(1.25);else if(e.key==='-')zoom(.8);else if(e.key==='0'){transform={...fitted};applyTransform();}else{selected='';view.kbGraphSelected='';update();}}};
-  applyTransform();update();
-  section.createEl('p',{cls:'kf-muted kf-graph-help',text:kl('Hintergrund ziehen zum Verschieben · + / − zum Zoomen · 0 zum Zentrieren · keine künstlichen Verbindungen. Angezeigt werden nur KnowledgeFlow-Notizen, keine fremden Vault-Dateien.','Drag background to pan · + / − to zoom · 0 to reset · no invented connections. Only KnowledgeFlow notes are shown, not other vault files.')});
+  const doc=parent.ownerDocument,win=doc.defaultView,base=kbGraph(view.plugin.knowledge||[],{sources:view.kbGraphSources!==false,limit:500}),section=parent.createEl('section',{cls:'kf-graph3d',attr:{'aria-label':kl('Dreidimensionales Wissensnetz','Three-dimensional knowledge network')}}),heading=section.createDiv({cls:'kf-graph3d-heading'});
+  heading.createEl('h1',{text:kl('Dein Wissensnetz','Your knowledge network')});heading.createSpan({text:'3D',cls:'kf-graph3d-badge'});button(heading,kl('Wissen & Quellen →','Knowledge & sources →'),()=>view.openKnowledge(),'kf-text-button');
+  const toolbar=section.createDiv({cls:'kf-graph3d-toolbar'}),search=toolbar.createEl('input',{type:'search',placeholder:kl('Wissen suchen …','Search knowledge …'),attr:{'aria-label':kl('Wissensnetz durchsuchen','Search knowledge network')}});search.value=view.kbGraphQuery||'';
+  const picker=toolbar.createEl('select',{attr:{'aria-label':kl('Notiz auswählen','Choose a note')}}),filters=toolbar.createEl('details',{cls:'kf-graph3d-filters'});filters.createEl('summary',{text:kl('Ansicht & Filter','View & filters')});const filterBody=filters.createDiv();
+  const toggle=(text,checked,change)=>{const label=filterBody.createEl('label',{cls:'kf-kb-check'}),input=label.createEl('input',{type:'checkbox'});input.checked=checked;label.createSpan({text});input.onchange=()=>change(input.checked);return input;};
+  toggle(kl('Quellen anzeigen','Show sources'),view.kbGraphSources!==false,value=>{view.kbGraphSources=value;view.render();});toggle(kl('Unverknüpfte Notizen','Unlinked notes'),view.kbGraphOrphans!==false,value=>{view.kbGraphOrphans=value;rebuild();});toggle(kl('Beschriftungen anzeigen','Show labels'),!!view.kbGraphLabels,value=>{view.kbGraphLabels=value;schedule();});
+  const edgeSelect=filterBody.createEl('select',{attr:{'aria-label':kl('Verbindungstyp','Connection type')}});for(const [value,text]of Object.entries({'':kl('Alle Verbindungen','All connections'),source:kl('Quellenbezüge','Source references'),related:kl('Verknüpfte Seiten','Related pages'),wikilink:'Wikilinks'}))edgeSelect.createEl('option',{value,text});edgeSelect.value=view.kbGraphEdgeType||'';edgeSelect.onchange=()=>{view.kbGraphEdgeType=edgeSelect.value;rebuild();};
+  const depth=filterBody.createEl('select',{attr:{'aria-label':kl('Verbindungstiefe','Connection depth')}});for(const value of [1,2,3])depth.createEl('option',{value:String(value),text:value+kl(' Verbindungsschritte',' connection steps')});depth.value=String(view.kbGraphDepth||1);depth.onchange=()=>{view.kbGraphDepth=Number(depth.value);rebuild();};
+  const localButton=button(toolbar,kl('Umgebung','Neighborhood'),()=>{if(!selected)return;view.kbGraphRoot=selected;rebuild();},'kf-text-button'),globalButton=button(toolbar,kl('Gesamtes Netz','Whole network'),()=>{view.kbGraphRoot='';rebuild();},'kf-text-button');
+  const count=section.createDiv({cls:'kf-graph3d-count',attr:{role:'status','aria-live':'polite'}}),stage=section.createDiv({cls:'kf-graph3d-stage'}),canvas=stage.createEl('canvas',{attr:{role:'img',tabindex:'0','aria-label':kl('3D-Wissensnetz. Ziehen dreht, Umschalt und Ziehen verschiebt. Mausrad zoomt. Notizen auch über die Auswahl erreichbar.','3D knowledge network. Drag to orbit, Shift-drag to pan, wheel to zoom. Notes also accessible through the selector.')}}),ctx=canvas.getContext('2d'),detail=stage.createEl('aside',{cls:'kf-graph3d-detail',attr:{'aria-label':kl('Ausgewählte Notiz','Selected note'),'aria-live':'polite'}}),status=stage.createDiv({cls:'kf-graph3d-empty'}),hoverLabel=stage.createDiv({cls:'kf-graph3d-hover'});
+  const controls=stage.createDiv({cls:'kf-graph3d-controls'});let camera={yaw:.35,pitch:-.18,zoom:1,panX:0,panY:0,target:{x:0,y:0,z:0}},selected=view.kbGraphSelected||'',hovered='',graph={nodes:[],edges:[]},positions=[],projected=[],frame=0,closed=false,timer=null,width=1,height=1,drag=null,pointers=new Map(),pinch=null,interacted=false,sceneKey='',lastSelectionTime=0,lastSelectionId='';
+  const persist=()=>{view.kbGraphCamera={...camera,key:sceneKey};};
+  const schedule=()=>{if(!closed&&!frame)frame=win.requestAnimationFrame(()=>{frame=0;draw();});};
+  const zoom=value=>{camera.zoom=Math.max(.2,Math.min(10,camera.zoom*value));interacted=true;persist();schedule();};
+  button(controls,'+',()=>zoom(1.2),'kf-text-button').setAttribute('aria-label',kl('Vergrößern','Zoom in'));button(controls,'−',()=>zoom(1/1.2),'kf-text-button').setAttribute('aria-label',kl('Verkleinern','Zoom out'));button(controls,kl('Zentrieren','Fit view'),()=>{camera=kbFit3D(positions,{...camera,yaw:.35,pitch:-.18},width,height);interacted=false;persist();schedule();},'kf-text-button');
+  const help=section.createDiv({cls:'kf-graph3d-help'});help.setText(kl('Ziehen: drehen · Umschalt + ziehen: verschieben · Mausrad: Zoom · Pfeiltasten: drehen · 0: zentrieren','Drag: orbit · Shift-drag: pan · Wheel: zoom · Arrow keys: orbit · 0: fit view'));
+  function updateDetail(){
+    detail.empty();const node=graph.nodes.find(n=>n.id===selected);detail.hidden=!node;localButton.disabled=!node;globalButton.hidden=!view.kbGraphRoot;
+    if(!node)return;detail.createSpan({text:kbLabel(node.kind),cls:'kf-eyebrow'});detail.createEl('h2',{text:node.title});detail.createEl('p',{text:node.degree+kl(' sichtbare Verbindungen',' visible connections')});detail.createEl('p',{text:kbExcerpt(node.record.body)});button(detail,kl('Notiz öffnen','Open note'),()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file),'kf-primary');button(detail,kl('Hier fokussieren','Focus neighborhood'),()=>{view.kbGraphRoot=selected;rebuild();},'kf-text-button');button(detail,kl('Schließen','Close'),()=>{selected='';view.kbGraphSelected='';updateDetail();schedule();},'kf-text-button');
+    const adjacent=new Set();for(const e of graph.edges){if(e.source===selected)adjacent.add(e.target);else if(e.target===selected)adjacent.add(e.source);}for(const n of graph.nodes.filter(n=>adjacent.has(n.id)).slice(0,12))button(detail,n.title,()=>select(n.id),'kf-text-button');
+  }
+  function select(id){selected=id;view.kbGraphSelected=id;picker.value=id;updateDetail();schedule();}
+  function rebuild(){
+    if(closed)return;graph=kbGraphExplore(base,{query:search.value,orphans:view.kbGraphOrphans!==false,edgeType:view.kbGraphEdgeType||'',root:view.kbGraphRoot||'',depth:view.kbGraphDepth||1});
+    const key=JSON.stringify([graph.nodes.map(n=>n.id),graph.edges]);if(view.kbGraph3DCache?.key!==key)view.kbGraph3DCache={key,positions:kbGraphLayout3D(graph)};positions=view.kbGraph3DCache.positions;
+    if(sceneKey!==key){sceneKey=key;if(view.kbGraphCamera?.key===key){camera={...view.kbGraphCamera};interacted=true;}else{camera=kbFit3D(positions,{yaw:.35,pitch:-.18},width,height);interacted=false;}hovered='';}
+    picker.empty();picker.createEl('option',{value:'',text:kl('Notiz auswählen …','Choose a note …')});for(const n of graph.nodes)picker.createEl('option',{value:n.id,text:n.title});if(!graph.nodes.some(n=>n.id===selected))selected='';picker.value=selected;view.kbGraphSelected=selected;
+    count.setText(graph.nodes.length+kl(' Notizen · ',' notes · ')+graph.edges.length+kl(' Verbindungen',' connections')+(view.kbGraphRoot?' · '+kl('Umgebung','Neighborhood')+' '+(view.kbGraphDepth||1):'')+(graph.omitted||graph.baseOmitted?' · '+(graph.omitted+graph.baseOmitted)+kl(' wegen Darstellungsgrenze ausgelassen',' omitted by display limit'):''));
+    status.hidden=!!graph.nodes.length&&!!ctx;status.setText(!ctx?kl('Grafikdarstellung nicht verfügbar. Notizen bleiben über die Auswahl und den Wissensbereich erreichbar.','Graphics unavailable. Notes remain available via the selector and knowledge workspace.'):!base.nodes.length?kl('Dein Wissensnetz wächst mit Quellen und freigegebenen Notizen. Öffne Wissen & Quellen, um zu beginnen.','Your network grows with sources and published notes. Open Knowledge & sources to begin.'):kl('Keine Notizen für diese Auswahl. Suche oder Filter anpassen; „Gesamtes Netz“ verlässt den Umgebungsmodus.','No notes match this view. Adjust search or filters; Whole network exits the neighborhood view.'));updateDetail();schedule();
+  }
+  function draw(){
+    if(closed||!ctx||!canvas.isConnected)return;const rect=stage.getBoundingClientRect();if(rect.width<1||rect.height<1)return;const dpr=Math.min(2,win.devicePixelRatio||1);if(width!==rect.width||height!==rect.height){width=rect.width;height=rect.height;if(!interacted)camera=kbFit3D(positions,camera,width,height);}
+    const pixelWidth=Math.round(width*dpr),pixelHeight=Math.round(height*dpr);if(canvas.width!==pixelWidth||canvas.height!==pixelHeight){canvas.width=pixelWidth;canvas.height=pixelHeight;}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+    const style=win.getComputedStyle(section),ink=style.getPropertyValue('--kf-ink').trim()||'#dedede',quiet=style.getPropertyValue('--kf-quiet').trim()||'#aaa',surface=style.getPropertyValue('--kf-canvas').trim()||'#222',nodeMap=new Map(graph.nodes.map(n=>[n.id,n])),neighbors=new Set([selected||hovered]);for(const e of graph.edges){if(e.source===(selected||hovered))neighbors.add(e.target);if(e.target===(selected||hovered))neighbors.add(e.source);}
+    projected=positions.map(p=>{const n=nodeMap.get(p.id),q=kbProject3D(p,camera,width,height);return {...q,id:p.id,title:n.title,kind:n.kind,radius:Math.max(3,Math.min(22,(4+Math.sqrt(n.degree)*1.2)*q.scale))};});const byId=new Map(projected.map(p=>[p.id,p]));
+    for(const e of graph.edges){const a=byId.get(e.source),b=byId.get(e.target);if(!a?.visible||!b?.visible)continue;const highlight=(selected||hovered)&&(e.source===(selected||hovered)||e.target===(selected||hovered));ctx.globalAlpha=highlight ? .7 : (selected||hovered) ? .06 : Math.max(.08,Math.min(.35,.2+(a.z+b.z)/1800));ctx.strokeStyle=highlight?ink:quiet;ctx.lineWidth=highlight?1.4:.7;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+    ctx.font='12px '+(style.fontFamily||'system-ui');ctx.textAlign='center';const labelBoxes=[];
+    for(const p of [...projected].sort((a,b)=>a.z-b.z)){if(!p.visible||p.x<-40||p.x>width+40||p.y<-40||p.y>height+40)continue;const primary=p.id===selected||p.id===hovered,dim=(selected||hovered)&&!neighbors.has(p.id);ctx.globalAlpha=dim ? .15 : Math.max(.3,Math.min(1,.7+p.z/800));
+      ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,Math.PI*2);if(p.kind==='source'){ctx.fillStyle=surface;ctx.fill();ctx.strokeStyle=primary?ink:quiet;ctx.lineWidth=primary?2:1.5;ctx.stroke();}else{const gradient=ctx.createRadialGradient(p.x-p.radius*.35,p.y-p.radius*.35,p.radius*.12,p.x,p.y,p.radius);gradient.addColorStop(0,ink);gradient.addColorStop(1,quiet);ctx.fillStyle=gradient;ctx.fill();if(primary){ctx.strokeStyle=ink;ctx.lineWidth=2;ctx.stroke();}}
+      if(primary||(view.kbGraphLabels&&!dim&&p.z>-80&&labelBoxes.length<40)){const label=p.title.length>36?p.title.slice(0,33)+'…':p.title,w=ctx.measureText(label).width,box={x:p.x-w/2,y:p.y-p.radius-20,w,h:16};if(primary||!labelBoxes.some(b=>box.x<b.x+b.w&&box.x+box.w>b.x&&box.y<b.y+b.h&&box.y+box.h>b.y)){labelBoxes.push(box);ctx.globalAlpha=1;ctx.lineWidth=4;ctx.strokeStyle=surface;ctx.strokeText(label,p.x,p.y-p.radius-8);ctx.fillStyle=ink;ctx.fillText(label,p.x,p.y-p.radius-8);}}
+    }ctx.globalAlpha=1;
+  }
+  search.oninput=e=>{view.kbGraphQuery=search.value;clearTimeout(timer);if(!e.isComposing)timer=setTimeout(rebuild,150);};picker.onchange=()=>select(picker.value);
+  const position=e=>{const r=canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};};
+  canvas.onpointerdown=e=>{if(e.button!==0&&e.button!==1)return;const p=position(e);pointers.set(e.pointerId,p);canvas.setPointerCapture(e.pointerId);if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={distance:Math.hypot(a.x-b.x,a.y-b.y),zoom:camera.zoom};drag=null;return;}drag={id:e.pointerId,x:p.x,y:p.y,lastX:p.x,lastY:p.y,moved:false,pan:e.shiftKey||e.button===1,hit:kbGraphHit(projected,p.x,p.y)?.id};canvas.focus({preventScroll:true});};
+  canvas.onpointermove=e=>{const p=position(e);if(pointers.has(e.pointerId))pointers.set(e.pointerId,p);if(pointers.size===2&&pinch){const [a,b]=[...pointers.values()];camera.zoom=Math.max(.2,Math.min(10,pinch.zoom*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(10,pinch.distance)));interacted=true;persist();schedule();return;}if(drag&&e.pointerId===drag.id){const dx=p.x-drag.lastX,dy=p.y-drag.lastY;drag.lastX=p.x;drag.lastY=p.y;if(Math.hypot(p.x-drag.x,p.y-drag.y)>4)drag.moved=true;if(drag.pan){camera.panX+=dx;camera.panY+=dy;}else{camera.yaw+=dx*.008;camera.pitch=Math.max(-1.5,Math.min(1.5,camera.pitch+dy*.008));}interacted=true;persist();schedule();}else{const hit=kbGraphHit(projected,p.x,p.y);if(hovered!==(hit?.id||'')){hovered=hit?.id||'';canvas.style.cursor=hit?'pointer':'grab';hoverLabel.hidden=!hit;hoverLabel.setText(hit?.title||'');schedule();}}};
+  canvas.onpointerup=e=>{pointers.delete(e.pointerId);if(pinch){if(pointers.size<2)pinch=null;drag=null;return;}if(drag?.id===e.pointerId){if(!drag.moved&&drag.hit){select(drag.hit);const now=Date.now();if(lastSelectionId===drag.hit&&now-lastSelectionTime<400)view.plugin.app.workspace.getLeaf(false).openFile(graph.nodes.find(n=>n.id===drag.hit).record.file);lastSelectionTime=now;lastSelectionId=drag.hit;}drag=null;}};
+  canvas.onpointercancel=e=>{pointers.delete(e.pointerId);drag=null;pinch=null;};canvas.onlostpointercapture=e=>{pointers.delete(e.pointerId);if(drag?.id===e.pointerId)drag=null;};canvas.onpointerleave=()=>{if(!drag){hovered='';hoverLabel.hidden=true;schedule();}};
+  canvas.onwheel=e=>{e.preventDefault();zoom(Math.exp(-Math.max(-100,Math.min(100,e.deltaY))*.003));};
+  canvas.onkeydown=e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','0','Escape','Enter'].includes(e.key)){e.preventDefault();if(e.key.startsWith('Arrow')){if(e.key==='ArrowLeft')camera.yaw-=.12;if(e.key==='ArrowRight')camera.yaw+=.12;if(e.key==='ArrowUp')camera.pitch=Math.max(-1.5,camera.pitch-.12);if(e.key==='ArrowDown')camera.pitch=Math.min(1.5,camera.pitch+.12);interacted=true;persist();schedule();}else if(e.key==='+'||e.key==='=')zoom(1.2);else if(e.key==='-')zoom(1/1.2);else if(e.key==='0'){camera=kbFit3D(positions,{yaw:.35,pitch:-.18},width,height);interacted=false;persist();schedule();}else if(e.key==='Escape'){selected='';view.kbGraphSelected='';updateDetail();schedule();}else if(e.key==='Enter'&&selected){const node=graph.nodes.find(n=>n.id===selected);if(node)view.plugin.app.workspace.getLeaf(false).openFile(node.record.file);}}};
+  const observer=win.ResizeObserver?new win.ResizeObserver(schedule):null;observer?.observe(stage);const onResize=()=>schedule();win.addEventListener('resize',onResize);view.graphCleanup=()=>{closed=true;if(frame)win.cancelAnimationFrame(frame);clearTimeout(timer);observer?.disconnect();win.removeEventListener('resize',onResize);pointers.clear();};
+  if(!ctx){status.hidden=false;status.setText(kl('Grafikdarstellung nicht verfügbar. Notizen bleiben über die Auswahl und den Wissensbereich erreichbar.','Graphics unavailable. Notes remain available via the selector and knowledge workspace.'));}
+  rebuild();schedule();
 }
 
 class KnowledgeCapture extends Modal{
@@ -929,7 +966,7 @@ class TaskView extends ItemView {
   constructor(leaf,plugin){super(leaf);this.plugin=plugin;this.projectFilter='';this.projectId='';this.projectArchive=false;this.projectTrash=false;this.projectExpanded=false;this.query='';this.tag='';this.statusFilter='';this.priorityFilter='';this.dueFilter='';this.filtersOpen=false;this.currentPreset='';this.searchIndex=new WeakMap();this.mode=startView(plugin.settings);this.homeExpanded=new Set();this.homeTaskDetails=new Set();this.boardMode='tasks';this.seriesQuery='';this.expandedSeries=new Set();this.plannerDate=today();this.plannerMode='agenda';this.calendarSpan=preferences(plugin.settings).calendarView;this.showArchive=false;this.archiveMode='tasks';this.statsDays=14;this.expandedTasks=new Set();this.noteDrafts=new Map();this.animations=new Set();this.closed=false;}
   getViewType(){return VIEW;} getDisplayText(){return 'KnowledgeFlow';} getIcon(){return 'kanban-square';}
   async onOpen(){this.closed=false;this.render();}
-  async onClose(){clearTimeout(this.searchTimer);this.calendarPointerCleanup?.();this.closed=true;for(const a of this.animations)a.cancel();this.animations.clear();}
+  async onClose(){this.graphCleanup?.();this.graphCleanup=null;clearTimeout(this.searchTimer);this.calendarPointerCleanup?.();this.closed=true;for(const a of this.animations)a.cancel();this.animations.clear();}
   captureCards(){
     const cards=new Map();
     for(const el of this.contentEl.querySelectorAll('.kf-card'))cards.set(el.dataset.path,{rect:el.getBoundingClientRect(),status:el.dataset.status});
@@ -952,7 +989,7 @@ class TaskView extends ItemView {
     }
   }
   render(){
-    clearTimeout(this.searchTimer);if(this.closed)return;
+    clearTimeout(this.searchTimer);if(this.closed)return;this.graphCleanup?.();this.graphCleanup=null;
     this.calendarPointerCleanup?.();
     const c=this.contentEl;
     // End an interrupted movement before measuring the stable board positions.
@@ -962,7 +999,7 @@ class TaskView extends ItemView {
     const focus=active&&c.contains(active)&&active.dataset.kfFocus?{key:active.dataset.kfFocus,start:active.selectionStart,end:active.selectionEnd}:null;
     const scroll=c.scrollTop,oldCalendar=c.querySelector('.kf-calendar-scroll');
     if(oldCalendar?.dataset.rangeKey)this.calendarViewport={key:oldCalendar.dataset.rangeKey,top:oldCalendar.scrollTop,left:oldCalendar.scrollLeft};
-    c.empty();c.addClass('kf-root');applyPreferences(c,this.plugin);
+    c.empty();c.addClass('kf-root');c.classList.toggle('kf-network-home',this.mode==='home'&&!this.showArchive);applyPreferences(c,this.plugin);
     const all=tasksForView(this.plugin.tasks.filter(t=>this.mode==='stats'&&!this.showArchive?(!t.meta.archived||t.meta.status==='done'):!!t.meta.archived===this.showArchive),this.mode,this.plannerMode,this.showArchive),s=summarize(all);
     const shell=c.createDiv({cls:'kf-shell'});
     const workspace=shell.createDiv({cls:'kf-workspace'});
@@ -1096,44 +1133,14 @@ class TaskView extends ItemView {
   filterValues(){return filterSnapshot({project:this.projectFilter,query:this.query,tag:this.tag,status:this.statusFilter,priority:this.priorityFilter,due:this.dueFilter});}
   applyFilter(preset){this.boardMode='tasks';const f=filterSnapshot(preset.filters);this.query=f.query;this.projectFilter=f.project;this.tag=f.tag;this.statusFilter=f.status;this.priorityFilter=f.priority;this.dueFilter=f.due;this.currentPreset=preset.id;if(this.mode==='home')this.mode='board';this.render();}
   renderHome(c,tasks,presets){
-    const knowledge=c.createDiv({cls:'kf-kb-home'});knowledge.createEl('h2',{text:kl('Dein Wissen','Your knowledge')});knowledge.createSpan({text:(this.plugin.knowledge||[]).filter(r=>r.meta.state==='published').length+kl(' Wissensseiten · ',' knowledge pages · ')+(this.plugin.knowledge||[]).filter(r=>r.meta.state==='review').length+kl(' Entwürfe zur Prüfung',' drafts for review')});button(knowledge,kl('Wissen & Quellen öffnen →','Open knowledge & sources →'),()=>this.openKnowledge(),'kf-primary');
-    renderKnowledgeGraph(this,c);
-    const overview=homeOverview(tasks),summary=c.createDiv({cls:'kf-day-summary'});
-    const timed=overview.today.filter(t=>dateValue(t.meta.scheduled)===today()&&timeMinutes(t.meta.scheduledTime)!==null).length;
-    summary.createSpan({text:tfmt(tr("{0} {1} für heute · {2} {3}"),overview.today.length,overview.today.length===1?tr('Aufgabe'):tr('Aufgaben'),timed,timed===1?tr('Zeitblock'):tr('Zeitblöcke')),attr:{role:'status','aria-live':'polite'}});
-    button(summary,tr('Tag planen →'),()=>this.openHomeDestination('planner'),'kf-text-button');
-    const layout=c.createDiv({cls:'kf-day-layout'}),focus=layout.createEl('section',{cls:'kf-day-main',attr:{'aria-label':tr('Dein Tag')}});
-    focus.createEl('h2',{text:tr('Dein Tag'),cls:'kf-day-heading'});
-    if(!overview.today.length)focus.createDiv({text:tr('Für heute ist noch nichts geplant oder fällig. Plane vorhandene Aufgaben über den Tagesplaner ein.'),cls:'kf-home-empty'});
-    const expanded=this.homeExpanded.has('today');for(const task of expanded?overview.today:overview.today.slice(0,5))this.homeTask(focus,task);
-    if(overview.today.length>5){const more=button(focus,expanded?tr('Weniger anzeigen'):tfmt(tr("Alle {0} anzeigen"),overview.today.length),()=>{if(expanded)this.homeExpanded.delete('today');else this.homeExpanded.add('today');this.render();},'kf-text-button');more.setAttribute('aria-expanded',String(expanded));}
-    button(focus,tr('Alle Aufgaben öffnen →'),()=>this.openHomeDestination('board'),'kf-text-button');
-    this.renderDayInsight(layout);
-    const shortcuts=layout.createEl('section',{cls:'kf-day-shortcuts',attr:{'aria-label':tr('Schnellzugriff')}});shortcuts.createEl('h2',{text:tr('Schnellzugriff'),cls:'kf-day-heading'});
-    const tiles=shortcuts.createDiv({cls:'kf-day-tile-grid'});
+    const layout=c.createDiv({cls:'kf-network-home-layout'});renderKnowledgeGraph(this,layout);
+    const actions=layout.createEl('nav',{cls:'kf-network-actions',attr:{'aria-label':tr('Schnellzugriff')}});
     for(const key of ['board','calendar','projects','series','stats','archive','trash','settings']){
-      const destination=HOME_DESTINATIONS[key],tile=button(tiles,'',()=>this.openHomeDestination(key),'kf-day-tile');tile.setAttribute('aria-label',(uiLanguage==='en'?'Open '+tr(destination.label):destination.label+tr(' öffnen')));
-      const icon=tile.createSpan({cls:'kf-day-tile-icon',attr:{'aria-hidden':'true'}});if(typeof setIcon==='function')setIcon(icon,destination.icon);
-      tile.createSpan({text:tr(destination.label),cls:'kf-day-tile-title'});tile.createSpan({text:tr(destination.description),cls:'kf-day-tile-description'});
-    }
-    if(presets.length&&effectivePreferences(this.plugin).showFavorites){
-      const favorites=c.createDiv({cls:'kf-home-favorites'});favorites.createEl('h2',{text:tr('Filterfavoriten')});const boardTasks=tasksForView(tasks,'board');
-      for(const preset of presets){const count=filterTasks(boardTasks,preset.filters,today(),this.searchIndex).length;button(favorites,preset.name+' · '+count,()=>this.applyFilter(preset),'kf-home-favorite');}
-    }
-    const details=c.createEl('details',{cls:'kf-day-more'});details.open=!!this.homeDetailsOpen;details.ontoggle=()=>this.homeDetailsOpen=details.open;
-    details.createEl('summary',{text:tfmt(tr("Weitere Aufgaben · {0} überfällig · {1} ohne Planung"),overview.overdue.length,overview.inbox.length)});
-    const grid=details.createDiv({cls:'kf-home-grid'});
-    const sections={overdue:[tr('Überfällig'),tr('Offene Aufgaben mit überschrittener Deadline.'),tr('Keine überfälligen Aufgaben.')],upcoming:[tr('Nächste 7 Tage'),tr('Anstehende Planung und Fälligkeiten ab morgen.'),tr('Keine anstehenden Termine in den nächsten sieben Tagen.')],inbox:[tr('Eingang'),tr('Ohne Planungsdatum; eine Deadline kann bereits gesetzt sein.'),tr('Alle offenen Aufgaben haben ein Planungsdatum.')]};
-    for(const [key,[label,description,empty]]of Object.entries(sections)){
-      const list=overview[key],section=grid.createEl('section',{cls:'kf-home-section',attr:{'aria-label':label}}),head=section.createDiv({cls:'kf-home-heading'});
-      head.createEl('h2',{text:label});head.createSpan({text:String(list.length),cls:'kf-count'});
-      section.createEl('p',{text:description,cls:'kf-muted kf-home-description'});
-      if(!list.length)section.createDiv({text:empty,cls:'kf-home-empty'});
-      const expanded=this.homeExpanded.has(key);
-      for(const task of expanded?list:list.slice(0,5))this.homeTask(section,task);
-      if(list.length>5){const more=button(section,expanded?tr('Weniger anzeigen'):tfmt(tr("Alle {0} anzeigen"),list.length),()=>{if(expanded)this.homeExpanded.delete(key);else this.homeExpanded.add(key);this.render();},'kf-text-button');more.setAttribute('aria-expanded',String(expanded));}
+      const destination=HOME_DESTINATIONS[key],tile=button(actions,'',()=>this.openHomeDestination(key),'kf-network-tile');tile.setAttribute('aria-label',(uiLanguage==='en'?'Open '+tr(destination.label):destination.label+tr(' öffnen')));tile.setAttribute('title',tr(destination.description));
+      const icon=tile.createSpan({cls:'kf-network-tile-icon',attr:{'aria-hidden':'true'}});if(typeof setIcon==='function')setIcon(icon,destination.icon);tile.createSpan({text:tr(destination.label)});
     }
   }
+
   goHome(){this.mode='home';this.showArchive=false;this.archiveMode='tasks';this.boardMode='tasks';this.plannerMode='agenda';this.seriesQuery='';this.resetFilters();this.contentEl.scrollTop=0;}
   openHomeDestination(key){if(key==='settings'){new SettingsModal(this.plugin).open();return;}Object.assign(this,homeDestination(key));if(this.mode==='planner'){this.plannerDate=today();this.calendarSpan=effectivePreferences(this.plugin).calendarView;}if(this.mode==='projects'){this.projectId='';this.projectArchive=false;this.projectTrash=false;this.projectExpanded=false;}this.resetFilters();if(this.contentEl)this.contentEl.scrollTop=0;}
   renderDayInsight(layout){
@@ -1682,6 +1689,8 @@ Object.assign(module.exports.testing,{kbAssistantContext});
 
 Object.assign(module.exports.testing,{kbStripLinks,kbWithLinks});
 
-Object.assign(module.exports.testing,{kbGraph,kbGraphLayout});
+Object.assign(module.exports.testing,{kbGraph,kbGraphExplore,kbGraphLayout3D,kbProject3D,kbFit3D,kbGraphHit});
 
-Object.assign(module.exports.testing,{kbGraphFit});
+
+
+Object.assign(module.exports.testing,{renderKnowledgeGraph});

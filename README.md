@@ -1,16 +1,25 @@
-# KnowledgeFlow 1.1
+# KnowledgeFlow 1.2
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.1: your knowledge network
+## New in 1.2: immersive 3D homepage
 
-My Day now contains a read-only network of linked notes. Larger nodes have more visible connections. Filled points are knowledge pages; rings are source snapshots. Select a node to highlight its neighbors and see its content excerpt. Open the Markdown note from the details panel, or double-click its node.
+The homepage now dedicates approximately 90% of its usable height to the knowledge network and 10% to the eight action tiles below. Daily task lists, day statistics, additional-task sections and favorites are no longer rendered on the homepage. Tasks remain available in Board/Calendar/Projects and statistics through their own tile. The Knowledge & sources button remains in the graph toolbar. At narrow widths the action tiles wrap into two rows to remain usable; the split is approximate rather than rigid on mobile or very short windows.
 
-Use search to highlight notes, the note selector for keyboard-friendly navigation, and the source checkbox to show/hide sources. Drag the background to pan; use +/− to zoom and Reset view to fit the graph. On the focused graph, +/−, 0 and Escape zoom, reset and clear selection. Expand increases its height without changing notes. Existing daily tasks and eight function tiles remain below it.
+The network uses real x/y/z node coordinates, force-directed placement, a rotatable perspective camera and depth-ordered sphere/ring drawing. It is a software-rendered 3D scene on Canvas 2D, not a CSS-rotated flat graph and not a WebGL/Three.js dependency. There are no large-vault frame-rate guarantees.
 
-Only real `related` links, exact source-version references and unambiguously resolvable `[[wikilinks]]` produce edges. Code examples and embedded documents are not graph links. Shared tags/projects never invent a connection. Only owned published KnowledgeFlow pages and optional source snapshots appear: this is not a whole-vault Obsidian graph. At most 180 nodes are displayed, most connected first, with an explicit omitted count. Add or approve knowledge through the existing workflow to grow the network.
+- Drag to orbit; Shift-drag (or middle-button drag) to pan; wheel/pinch and +/− controls zoom. Arrow keys orbit, 0 fits the scene, Escape clears selection, Enter opens a selected note.
+- Click/tap selects a note and highlights adjacent connections; double-click/tap opens the note. The note selector and details panel provide an alternative to targeting small nodes.
+- Neighborhood focuses on a selected note and its neighbors at a selectable depth of 1–3 connection steps. Whole network returns to the global view.
+- View & filters controls source snapshots, unlinked notes, labels and connection types. Search matches all terms across title, body, tags and area; it does not implement Obsidian's full query language.
+- Labels appear on hover/selection by default. Optional additional labels have distance and overlap limits. Unselected edges fade to keep the view readable.
+- Rendering is requested only when the view changes, is resized or receives input. There is no automatic spinning or permanently running physics animation. Closing/navigating disconnects observers, cancels queued frames and removes resize listeners.
+
+Only actual `related` links, exact source-version references and unambiguously resolved `[[wikilinks]]` create edges. No relationships are inferred from tags or projects. Only owned published KnowledgeFlow pages and optional source snapshots appear. The base graph is capped at 500 nodes and each 3D scene at 240, most connected first; omitted counts are visible. Filters/neighborhoods operate on that base, not on arbitrary vault notes beyond the base limit.
+
+See [graph research and design decisions](docs/GRAPH-RESEARCH.md) for the official Obsidian, Juggl and 3D Graph inspirations.
 
 ## Included since 1.0
 
@@ -20,11 +29,11 @@ Only real `related` links, exact source-version references and unambiguously res
 - **AI-assisted workflow:** prepare a work request from selected sources and manually pass it to an assistant of your choice. Paste its JSON proposal back into KnowledgeFlow; it stays a draft until reviewed. The plugin has no built-in AI provider or network calls.
 - **Knowledge in work:** project knowledge view, linked knowledge pages on tasks, related pages and native wikilinks. Personal annotations remain separate from proposed content.
 - **History and health:** earlier record versions, loading previous page text as a fresh draft, operation logs, missing references, newer source revisions and duplicate titles. Health findings are review prompts, not a truth detector.
-- **TaskFlow-derived work tools:** My Day, interactive Kanban, projects, calendar, recurring tasks, filters, statistics, notes/subtasks, archive/trash and detailed settings. Gray interface with status and priority colors; eight home tiles plus a knowledge entry. New tasks remain a board action.
+- **TaskFlow-derived work tools:** graph-first homepage, interactive Kanban, projects, calendar, recurring tasks, filters, statistics, notes/subtasks, archive/trash and detailed settings. Gray interface with status and priority colors; eight action tiles plus a knowledge-workspace entry. New tasks remain a board action.
 
 ## Workflow
 
-1. Open **Knowledge / Wissen** through My Day or the plugin command.
+1. Open **Knowledge / Wissen** through the homepage toolbar or the plugin command.
 2. Capture source text. URLs are stored as references; pages are not fetched.
 3. Prepare a draft yourself, or select sources under **AI work request**. Nothing is sent automatically.
 4. Paste a structured proposal under **Import AI draft** if using an assistant.
@@ -40,7 +49,7 @@ Open [`preview/index.html`](preview/index.html) in a desktop browser, or run `np
 
 ## Optional installation later
 
-**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.1.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
+**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.2.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
 
 Native Obsidian and mobile validation are not completed for 1.0. The inherited task layer has automated coverage; the new knowledge workflow is tested through an in-memory vault and browser simulation. Cross-device conflicts and process/power failures are not atomic transactions. Use normal backups before any later real-vault pilot.
 

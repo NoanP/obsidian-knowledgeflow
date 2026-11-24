@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-24
+
+### Changed
+- Replaced the 2D homepage graph with a real-coordinate 3D scene: deterministic spatial force layout, perspective projection, depth sorting and sphere/ring drawing on Canvas 2D. No external rendering dependency or CDN.
+- Homepage now uses an approximately 90/10 vertical split between the graph workspace and eight action tiles. Daily tasks, day statistics, favorites and additional-task sections are not rendered there. The underlying task/statistic functions remain accessible through navigation.
+- Reduced default label density, highlighted actual neighbors and added title/body/tag/area text filtering, source visibility, unlinked-note visibility and connection-type filters.
+
+### Added
+- Local neighborhood exploration at depth 1–3 and return to the global network, inspired by Obsidian local graphs and Juggl workspace navigation.
+- Pointer orbit, Shift/middle-drag pan, wheel/pinch zoom, click/tap selection, double-click/tap open, keyboard orbit/fit/open and accessible note selection.
+- Bounded layout (240 visible scene nodes, 500 base graph nodes), omitted-count disclosure, cached coordinates, on-demand frames, high-DPI drawing and observer/frame cleanup.
+- Research notes with source links and implementation boundaries. Replaced retired 2D layout tests with 3D math, filtering, picking, lifecycle and homepage-content checks.
+
+### Validation
+- 150 automated tests pass; isolated browser preview visually confirms graph-first layout and removal of day widgets. Renderer selection, neighborhood interaction, orbit and cleanup are also exercised by the in-memory DOM/Canvas host test.
+- No installation or modification in Obsidian. Native Obsidian/mobile interaction and large-vault performance remain unverified. TaskFlow is unchanged.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added

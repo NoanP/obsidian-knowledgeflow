@@ -28,3 +28,9 @@ Native Obsidian plugin lifecycle, real YAML, actual sync races, mobile gestures,
 ## Knowledge network (1.1)
 
 The graph is read-only. Tests verify eligibility, no synthetic same-tag edges, exact version matching, undirected edge deduplication, explicit wikilinks, missing/ambiguous targets, ignored code examples, capped node counts, deterministic finite layout and viewport fitting. Browser checks cover home placement, selection/detail navigation and graph controls in the synthetic preview. Native Obsidian validation is still outside the authorized scope.
+
+## 3D graph and homepage (1.2)
+
+Automated tests cover a non-planar deterministic layout, finite bounded coordinates, perspective size changes with depth, camera orbit, wide/narrow viewport fitting, frontmost-node hit testing, BFS neighborhoods (1–3 hops), connection/orphan/text filters, explicit node limits, removal of home task/stat rendering and DOM/Canvas-host interaction/lifecycle without file writes.
+
+The browser preview was visually inspected for the viewport split and eight action tiles. Native browser input automation was intermittently interrupted by window changes, so automated renderer-host tests supplement rather than replace that visual inspection. Native Obsidian lifecycle/mobile gestures and large-vault performance are still separate outstanding checks. No Obsidian files were touched.
