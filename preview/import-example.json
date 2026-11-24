@@ -1,0 +1,19 @@
+{
+  "knowledgeflowChatExport": 1,
+  "conversations": [
+    {
+      "id": "synthetic-import-example",
+      "title": "Beispielchat: Wissen organisieren",
+      "createdAt": "2026-11-24T09:00:00Z",
+      "messages": [
+        { "role": "user", "content": "Wie dokumentiere ich einen neuen Arbeitsablauf?", "createdAt": "2026-11-24T09:00:00Z" },
+        { "role": "assistant", "content": "Beschreibe Ziel, Schritte und offene Fragen. Verknüpfe die Notiz mit ihrer Quelle.", "createdAt": "2026-11-24T09:01:00Z" }
+      ]
+    },
+    {
+      "id": "synthetic-unselected-example",
+      "title": "Beispielchat: Nicht ausgewählt",
+      "messages": [ { "role": "user", "content": "Dieses Gespräch kann in der Vorschau abgewählt werden." } ]
+    }
+  ]
+}

@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-24
+
+### Added
+- Central selected-source import from Knowledge & sources: explicitly chosen vault Markdown notes, UTF-8 Markdown/text files, ChatGPT/Claude conversation JSON and a documented KnowledgeFlow Chat v1 exchange format.
+- Read-only preview with per-conversation selection, source origin/author, source date and its basis, separate import time, original-input SHA-256 and exact-content duplicate detection against existing sources and the current batch.
+- Immutable new revisions for changed selected note paths or stable conversation IDs. New sources stay in the inbox and require the normal draft/review/publish workflow.
+- Active-branch ChatGPT text previews, Claude text/block previews and retained canonical per-conversation JSON. Unknown formats, ambiguous/broken branches, unsupported non-text parts and missing dates are disclosed.
+- Guarded file decoding, bounded previews/imports, stale-note detection, expiring private preview plans and recovery through the existing persistent journal.
+- Synthetic chat example and selectable note examples in the isolated preview. No external provider calls, live chat recording, attachment fetching, original-file edits or automatic TaskFlow import.
+
+### Validation
+- 184 automated tests pass, covering selected-only reads, immutable originals, provenance/dates, exact duplicates, revisions, branch order, parser errors, UTF-8/BOM, stale/expired previews, concurrent confirmations and interrupted batch recovery.
+- Isolated browser verification includes a real synthetic-file chooser, note/chat preview, duplicate disclosure, conversation deselection and exact selected-source import.
+- Native Obsidian/mobile and real provider-export variants require a later explicitly authorized pilot. This release changes the KnowledgeFlow repository only.
+
+
 ## [1.4.0] - 2026-11-24
 
 ### Added

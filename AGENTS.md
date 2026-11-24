@@ -9,7 +9,9 @@ in test vaults. Validate in the in-memory browser host and automated tests inste
 `main.js` is source and BRAT artifact; the sole runtime dependency is Obsidian.
 Keep plugin ID `knowledgeflow`, view type `knowledgeflow-board`, CSS prefix `kf-`,
 task marker `knowledgeflow: 1`, project key `knowledgeflowProject`, and owned root
-`KnowledgeFlow/` independent. No automatic import of TaskFlow or other vault files.
+`KnowledgeFlow/` independent. No automatic import of TaskFlow or other vault files. Source import reads note bodies
+only after explicit selection and a preview request. Originals are read-only; selected
+imports are create-only source snapshots, published through the existing journal.
 Never publish vault data, credentials or .obsidian. Use synthetic examples only.
 
 Source text is immutable and SHA-256 pinned. Save edits as new snapshots. Unknown

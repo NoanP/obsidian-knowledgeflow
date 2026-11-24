@@ -471,7 +471,7 @@ function kbFields(input){
 function kbSearch(records,query='',filters={}){
   const terms=searchText(query).split(/\s+/).filter(Boolean);
   return records.filter(r=>(!filters.state||r.meta.state===filters.state)&&(!filters.kind||r.meta.kind===filters.kind)&&(!filters.project||r.meta.project===filters.project)&&(!filters.area||r.meta.area===filters.area)).map(r=>{
-    const title=searchText(r.meta.title),text=searchText([r.meta.title,r.body,r.meta.userNotes||'',r.meta.area,...(r.meta.tags||[])].join(' '));
+    const title=searchText(r.meta.title),text=searchText([r.meta.title,r.body,r.meta.userNotes||'',r.meta.author||'',r.meta.importInfo?.origin||'',r.meta.importInfo?.sourceDate||'',r.meta.area,...(r.meta.tags||[])].join(' '));
     return {record:r,score:terms.reduce((s,t)=>s+(title.includes(t)?5:1),0),matches:terms.every(t=>text.includes(t))};
   }).filter(r=>r.matches).sort((a,b)=>b.score-a.score||a.record.meta.title.localeCompare(b.record.meta.title)).map(r=>r.record);
 }
@@ -595,7 +595,7 @@ function renderKnowledgeGraph(view,parent){
   const help=section.createDiv({cls:'kf-graph3d-help'});help.setText(kl('Ziehen: drehen · Umschalt + ziehen: verschieben · Mausrad: Zoom · Pfeiltasten: drehen · 0: zentrieren','Drag: orbit · Shift-drag: pan · Wheel: zoom · Arrow keys: orbit · 0: fit view'));
   function updateDetail(){
     detail.empty();const node=graph.nodes.find(n=>n.id===selected);detail.hidden=!node;localButton.disabled=!node;globalButton.hidden=!view.kbGraphRoot;
-    if(!node)return;detail.createSpan({text:kbLabel(node.kind),cls:'kf-eyebrow'});detail.createEl('h2',{text:node.title});detail.createEl('p',{text:node.degree+kl(' sichtbare Verbindungen',' visible connections')});detail.createEl('p',{text:kbExcerpt(node.record.body)});button(detail,kl('Notiz öffnen','Open note'),()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file),'kf-primary');button(detail,kl('Hier fokussieren','Focus neighborhood'),()=>{view.kbGraphRoot=selected;rebuild();},'kf-text-button');button(detail,kl('Schließen','Close'),()=>{selected='';view.kbGraphSelected='';updateDetail();schedule();},'kf-text-button');
+    if(!node)return;detail.createSpan({text:kbLabel(node.kind),cls:'kf-eyebrow'});detail.createEl('h2',{text:node.title});detail.createEl('p',{text:node.degree+kl(' sichtbare Verbindungen',' visible connections')});detail.createEl('p',{text:kbExcerpt(kbSourceDisplay(node.record))});button(detail,kl('Notiz öffnen','Open note'),()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file),'kf-primary');button(detail,kl('Hier fokussieren','Focus neighborhood'),()=>{view.kbGraphRoot=selected;rebuild();},'kf-text-button');button(detail,kl('Schließen','Close'),()=>{selected='';view.kbGraphSelected='';updateDetail();schedule();},'kf-text-button');
     const adjacent=new Set();for(const e of graph.edges){if(e.source===selected)adjacent.add(e.target);else if(e.target===selected)adjacent.add(e.source);}for(const n of graph.nodes.filter(n=>adjacent.has(n.id)).slice(0,12))button(detail,n.title,()=>select(n.id),'kf-text-button');
   }
   function select(id){selected=id;view.kbGraphSelected=id;picker.value=id;updateDetail();schedule();}
@@ -630,6 +630,127 @@ function renderKnowledgeGraph(view,parent){
   const observer=win.ResizeObserver?new win.ResizeObserver(schedule):null;observer?.observe(stage);const onResize=()=>schedule();win.addEventListener('resize',onResize);view.graphCleanup=()=>{closed=true;if(frame)win.cancelAnimationFrame(frame);clearTimeout(timer);observer?.disconnect();win.removeEventListener('resize',onResize);pointers.clear();};
   if(!ctx){status.hidden=false;status.setText(kl('Grafikdarstellung nicht verfügbar. Notizen bleiben über die Auswahl und den Wissensbereich erreichbar.','Graphics unavailable. Notes remain available via the selector and knowledge workspace.'));}
   rebuild();schedule();
+}
+
+// Source imports are explicit, local and read-only until a selected preview is confirmed.
+const KB_IMPORT_MAX=20,KB_IMPORT_FILE=8*1024*1024,KB_IMPORT_TOTAL=16*1024*1024;
+function kbImportDate(value,unit='auto'){
+  if(value===undefined||value===null||value==='')return '';
+  if(typeof value==='number'){if(!Number.isFinite(value)||value<=0)return '';const d=new Date(unit==='milliseconds'?value:value<1e12?value*1000:value);return Number.isFinite(d.getTime())?d.toISOString():'';}
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value))return '';
+  const [y,m,d]=value.slice(0,10).split('-').map(Number);if(m<1||m>12||d<1||d>new Date(Date.UTC(y,m,0)).getUTCDate())return '';
+  if(value.length===10)return value;const date=new Date(value);return Number.isFinite(date.getTime())?date.toISOString():'';
+}
+function kbStableJSON(value){
+  let count=0;const walk=(v,depth)=>{if(depth>80||++count>150000)throw new Error(kl('JSON-Struktur ist zu groß oder zu tief.','JSON structure is too large or deep.'));if(Array.isArray(v))return v.map(x=>walk(x,depth+1));if(v&&typeof v==='object')return Object.fromEntries(Object.keys(v).sort().map(key=>[key,walk(v[key],depth+1)]));return v;};return JSON.stringify(walk(value,0),null,2);
+}
+function kbImportNotePath(path){return typeof path==='string'&&path.length<=1000&&!/[\\\x00-\x1f:%?#]/.test(path)&&!path.startsWith(KB_ROOT+'/')&&path.split('/').every(p=>p&&p!=='.'&&p!=='..'&&!p.startsWith('.')&&p.trim()===p)&&/\.md$/i.test(path);}
+function kbImportTextPart(content){
+  if(typeof content==='string')return {text:content,unsupported:0};
+  if(!Array.isArray(content))return {text:'',unsupported:content==null?0:1};
+  const text=[],other=[];for(const part of content){if(typeof part==='string')text.push(part);else if(part&&typeof part==='object'&&typeof part.text==='string'&&(!part.type||['text','input_text','output_text'].includes(part.type)))text.push(part.text);else other.push(part);}return {text:text.join('\n'),unsupported:other.length};
+}
+function kbChatMessages(conversation,format){
+  let rawMessages=[];
+  if(format==='chatgpt-json'){
+    const nodes=conversation.mapping;if(!nodes||typeof nodes!=='object'||Array.isArray(nodes)||Object.keys(nodes).length>10000)throw new Error('Invalid ChatGPT mapping');
+    const map=new Map(Object.entries(nodes));let current=conversation.current_node;
+    if(!current){const parents=new Set([...map.values()].map(n=>n?.parent).filter(Boolean)),leaves=[...map.keys()].filter(id=>!parents.has(id));if(leaves.length!==1)throw new Error(kl('Chat hat mehrere Zweige ohne eindeutigen aktiven Zweig.','Chat has multiple branches without an active branch.'));current=leaves[0];}
+    const chain=[],seen=new Set();while(current){if(typeof current!=='string'||!map.has(current)||seen.has(current))throw new Error('Broken or cyclic chat branch');seen.add(current);const node=map.get(current);if(!node||typeof node!=='object')throw new Error('Invalid chat node');if(node.message)chain.push(node.message);current=node.parent;}
+    rawMessages=chain.reverse().map(m=>{if(!m.author||typeof m.author.role!=='string')throw new Error('Missing message role');return {role:m.author.role,content:m.content?.parts,date:m.create_time};});
+  }else if(format==='claude-json'){
+    if(!Array.isArray(conversation.chat_messages))throw new Error('Invalid Claude messages');rawMessages=conversation.chat_messages.map(m=>({role:m.sender,content:typeof m.text==='string'&&m.text?m.text:m.content,date:m.created_at}));
+  }else{
+    if(!Array.isArray(conversation.messages))throw new Error('Invalid exchange-format messages');rawMessages=conversation.messages.map(m=>({role:m.role,content:m.content,date:m.createdAt}));
+  }
+  if(rawMessages.length>5000)throw new Error('Too many messages');const messages=[];let unsupported=0;
+  for(const m of rawMessages){if(typeof m.role!=='string'||!m.role.trim()||m.role.length>80)throw new Error('Invalid message role');const parts=kbImportTextPart(m.content);unsupported+=parts.unsupported;if(parts.text)messages.push({role:m.role,text:parts.text,date:kbImportDate(m.date)});}
+  if(!messages.some(m=>m.text.trim()))throw new Error(kl('Kein lesbarer Chat-Text gefunden.','No readable chat text found.'));return {messages,unsupported};
+}
+function kbImportTranscript(body,format){const parsed=JSON.parse(body),{messages}=kbChatMessages(parsed,format);return messages.map(m=>'### '+m.role+(m.date?' · '+m.date:'')+'\n\n'+m.text).join('\n\n');}
+async function kbParseImportFile(input){
+  const name=kbText(input.name,500),text=kbText(input.text,KB_IMPORT_FILE),fileHash=await kbHash(text),baseName=name.split(/[\\/]/).pop(),date=kbImportDate(input.lastModified,'milliseconds'),items=[],errors=[];
+  if(!/\.(md|txt|json)$/i.test(baseName))throw new Error(kl('Nur Markdown-, Text- oder JSON-Dateien auswählen. ZIP-Dateien vorher entpacken.','Choose Markdown, text or JSON files. Extract ZIP files first.'));
+  if(!/\.json$/i.test(baseName)){
+    if(!text.trim()||text.length>1000000)throw new Error(kl('Text leer oder länger als 1 Million Zeichen.','Text is empty or exceeds 1 million characters.'));items.push({title:baseName.replace(/\.[^.]+$/,'').slice(0,240)||baseName,body:text,identity:'text:'+fileHash,origin:baseName,format:'text',sourceDate:date,dateBasis:date?'file-modified':'unknown',originalFileHash:fileHash});return {items,errors};
+  }
+  const data=JSON.parse(text.replace(/^\uFEFF/,''));let conversations,forced='';
+  if(data?.knowledgeflowChatExport===1){conversations=data.conversations;forced='knowledgeflow-chat-v1';}
+  else if(Array.isArray(data))conversations=data;
+  else if(data?.mapping||Array.isArray(data?.chat_messages))conversations=[data];
+  else if(Array.isArray(data?.conversations))conversations=data.conversations;
+  else throw new Error(kl('Unbekanntes Chat-JSON. Erwartet werden ChatGPT, Claude oder KnowledgeFlow Chat v1.','Unknown chat JSON. Expected ChatGPT, Claude or KnowledgeFlow Chat v1.'));
+  if(!Array.isArray(conversations)||!conversations.length||conversations.length>200)throw new Error(kl('Export muss 1–200 Gespräche enthalten. Größere Exporte vorher aufteilen.','Export must contain 1–200 conversations. Split larger exports first.'));
+  for(const [i,c]of conversations.entries()){
+    try{if(!c||typeof c!=='object'||Array.isArray(c))throw new Error('Invalid conversation');const format=forced||(c.mapping?'chatgpt-json':Array.isArray(c.chat_messages)?'claude-json':'');if(!format)throw new Error('Unknown conversation schema');
+      const {messages,unsupported}=kbChatMessages(c,format),body=kbStableJSON(c);kbText(body);const provider=format==='chatgpt-json'?'ChatGPT':format==='claude-json'?'Claude':'Chat',id=c.id??c.uuid??c.conversation_id??'',stableId=id===null?'':String(id);if(id!==null&&typeof id!=='string')throw new Error('Invalid conversation ID');if(stableId.length>500)throw new Error('Conversation ID too long');
+      const title=typeof (c.title??c.name)==='string'&&(c.title??c.name).trim()?(c.title??c.name).trim().slice(0,240):provider+' · '+(i+1),sourceDate=kbImportDate(c.create_time??c.created_at??c.createdAt);
+      items.push({title,body,identity:stableId?'chat:'+format+':'+stableId:'text:'+await kbHash(body),origin:baseName+' · '+provider,format,conversationId:stableId,sourceDate,dateBasis:sourceDate?'conversation-created':'unknown',originalFileHash:fileHash,messageCount:messages.length,warnings:unsupported?[kl('Nichttext-Inhalte bleiben im JSON; Anhänge werden nicht geladen.','Non-text content stays in JSON; attachments are not loaded.')]:[]});
+    }catch(e){errors.push(baseName+' · '+kl('Gespräch ','Conversation ')+(i+1)+': '+e.message);}
+  }return {items,errors};
+}
+async function kbPrepareSourceImport(plugin,inputs,options={}){
+  if(!Array.isArray(inputs)||!inputs.length||inputs.length>30)throw new Error(kl('1–30 Eingaben auswählen.','Select 1–30 inputs.'));const origin=kbText(options.origin||'',240).trim(),fallbackDate=kbImportDate(options.sourceDate||'');if(options.sourceDate&&!fallbackDate)throw new Error(kl('Ungültiges Quelldatum.','Invalid source date.'));
+  const items=[],errors=[],notes=[],allowed=new Set(plugin.app.vault.getMarkdownFiles().filter(f=>kbImportNotePath(f.path)).map(f=>f.path));let total=0;const byteSize=t=>new TextEncoder().encode(t).length;
+  for(const input of inputs){
+    try{
+      if(input.kind==='vault'){
+        if(!kbImportNotePath(input.path)||!allowed.has(input.path))throw new Error('Not an eligible selected Markdown note');if(notes.length>=KB_IMPORT_MAX)throw new Error('Too many selected notes');const file=plugin.app.vault.getAbstractFileByPath(input.path);if(!file)throw new Error('Note disappeared');if(file.stat?.size>1000000)throw new Error('Note exceeds size limit');const raw=await plugin.app.vault.read(file);kbText(raw);total+=byteSize(raw);if(total>KB_IMPORT_TOTAL)throw new Error('Combined import size limit exceeded');if(!raw.trim())throw new Error('Empty note');const hash=await kbHash(raw),date=kbImportDate(file.stat?.mtime,'milliseconds');notes.push({path:input.path,hash});items.push({title:input.path.split('/').pop().replace(/\.md$/i,'').slice(0,240),body:raw,identity:'note:'+input.path,origin:input.path,format:'vault-note',sourceDate:date,dateBasis:date?'file-modified':'unknown',originalFileHash:hash,notePath:input.path});
+      }else if(input.kind==='file'){
+        const size=byteSize(kbText(input.text,KB_IMPORT_FILE));if(size>KB_IMPORT_FILE)throw new Error('File exceeds 8 MiB limit');total+=size;if(total>KB_IMPORT_TOTAL)throw new Error('Combined import size limit exceeded');const parsed=await kbParseImportFile(input);items.push(...parsed.items);errors.push(...parsed.errors);
+      }else throw new Error('Invalid import input');
+    }catch(e){errors.push(String(input.path||input.name||'Input')+': '+e.message);}
+    if(total>KB_IMPORT_TOTAL)throw new Error(kl('Auswahl überschreitet 16 MiB. Weniger Dateien auswählen.','Selection exceeds 16 MiB. Choose fewer files.'));if(items.length>200)throw new Error('Preview exceeds 200 sources');
+  }
+  await plugin.kbFresh();const sources=(plugin.knowledge||[]).filter(r=>r.meta.kind==='source'),byRevision=new Map(sources.map(r=>[r.meta.revision,r])),originIds=new Set(sources.map(r=>r.meta.id)),seen=new Map(),rows=[];
+  for(const [index,item]of items.entries()){
+    const revision=await kbHash(item.body),id='src-'+await kbHash(item.identity),existing=byRevision.get(revision),batch=seen.get(revision),sameOrigin=originIds.has(id);
+    const targetPath=KB_ROOT+'/Quellen/'+id+'--'+revision+'.md',conflict=!existing&&!!plugin.app.vault.getAbstractFileByPath(targetPath);
+    const row={...item,key:String(index),id,revision,author:origin||(['chatgpt-json','claude-json'].includes(item.format)?item.format==='chatgpt-json'?'ChatGPT':'Claude':kl('Lokaler Import','Local import')),sourceDate:item.sourceDate||fallbackDate,dateBasis:item.sourceDate?item.dateBasis:fallbackDate?'user-specified':'unknown',status:conflict?'conflict':existing?'duplicate':batch!==undefined?'batch-duplicate':sameOrigin?'revision':'new',duplicatePath:existing?.file.path||'',duplicateKey:batch??'',warnings:[...(item.warnings||[]),...(conflict?[kl('Vorhandene Zieldatei ist nicht als gültige Quelle lesbar. Original prüfen.','Existing target is not readable as a valid source. Inspect it first.')]:[]),...(!item.sourceDate&&!fallbackDate?[kl('Quelldatum unbekannt.','Source date unknown.')]:[])]};
+    if(!seen.has(revision))seen.set(revision,row.key);rows.push(row);
+  }
+  const id=crypto.randomUUID(),created=Date.now();plugin.kbImportPreviews=plugin.kbImportPreviews||new Map();for(const [key,plan]of plugin.kbImportPreviews)if(created-plan.created>1800000)plugin.kbImportPreviews.delete(key);while(plugin.kbImportPreviews.size>=3)plugin.kbImportPreviews.delete(plugin.kbImportPreviews.keys().next().value);
+  plugin.kbImportPreviews.set(id,{id,created,rows,notes,errors});return structuredClone({id,rows,errors});
+}
+function kbCommitSourceImport(plugin,id,selectedKeys){return plugin.kbQueue(async()=>{
+  const plan=plugin.kbImportPreviews?.get(id);if(!plan||Date.now()-plan.created>1800000)throw new Error(kl('Importvorschau abgelaufen. Neu vorbereiten.','Import preview expired. Prepare it again.'));
+  if(!Array.isArray(selectedKeys)||!selectedKeys.length||selectedKeys.length>KB_IMPORT_MAX||new Set(selectedKeys).size!==selectedKeys.length||selectedKeys.some(key=>typeof key!=='string'||!plan.rows.some(r=>r.key===key)))throw new Error(kl('1–20 eindeutige Quellen auswählen.','Select 1–20 unique sources.'));
+  const rows=plan.rows.filter(r=>selectedKeys.includes(r.key));for(const row of rows.filter(r=>r.notePath)){const file=plugin.app.vault.getAbstractFileByPath(row.notePath);if(!file||await kbHash(await plugin.app.vault.read(file))!==row.originalFileHash)throw new Error(kl('Eine ausgewählte Notiz wurde geändert. Vorschau neu erstellen.','A selected note changed. Prepare a fresh preview.'));}
+  const state=await plugin.kbJournalScan();if(state.pending.length||state.invalid.length)throw new Error(kl('Zuerst offene Änderungen im Protokoll prüfen.','Review pending changes in the log first.'));await plugin.kbFresh();const known=new Map((plugin.knowledge||[]).filter(r=>r.meta.kind==='source').map(r=>[r.meta.revision,r.file.path])),writes=[],skipped=[],imported=[],importedAt=new Date().toISOString();
+  for(const row of rows){if(known.has(row.revision)){skipped.push({title:row.title,path:known.get(row.revision)});continue;}const path=KB_ROOT+'/Quellen/'+row.id+'--'+row.revision+'.md',meta={knowledgeflowKnowledge:1,id:row.id,title:row.title,kind:'source',state:'inbox',url:'',author:row.author,revision:row.revision,created:importedAt,importInfo:{version:1,format:row.format,origin:row.origin,sourceDate:row.sourceDate,dateBasis:row.dateBasis,importedAt,originalFileHash:row.originalFileHash,conversationId:row.conversationId||'',messageCount:row.messageCount||0}};writes.push({path,before:null,after:encode(meta,row.body)});known.set(row.revision,path);imported.push({title:row.title,path});}
+  // One journaled batch; interruption recovery is provided by the existing transaction layer.
+  if(writes.length)await plugin.kbCommit(writes,'import');plugin.kbImportPreviews.delete(id);return {imported,skipped};
+});}
+function kbSourceDisplay(record){try{if(record.meta.kind==='source'&&['chatgpt-json','claude-json','knowledgeflow-chat-v1'].includes(record.meta.importInfo?.format))return kbImportTranscript(record.body,record.meta.importInfo.format);}catch(_){}return record.body;}
+async function kbReadImportFiles(files){
+  if(!Array.isArray(files)||files.length>10)throw new Error(kl('Höchstens 10 Dateien auswählen.','Select at most 10 files.'));let bytes=0;const inputs=[];
+  for(const file of files){if(file.size>KB_IMPORT_FILE||bytes+file.size>KB_IMPORT_TOTAL)throw new Error('File selection exceeds size limit');const buffer=await file.arrayBuffer();bytes+=buffer.byteLength;if(buffer.byteLength>KB_IMPORT_FILE||bytes>KB_IMPORT_TOTAL)throw new Error('File selection exceeds size limit');const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(buffer);inputs.push({kind:'file',name:file.name,text,lastModified:file.lastModified});}return inputs;
+}
+class KnowledgeSourceImport extends Modal{
+  constructor(plugin){super(plugin.app);this.plugin=plugin;this.selected=new Set();this.files=[];this.offset=0;this.generation=0;this.alive=true;}
+  onOpen(){const c=this.contentEl;c.addClass('kf-editor-modal');this.modalEl.addClass('kf-knowledge-modal');applyPreferences(c,this.plugin);c.createEl('h2',{text:kl('Quellen importieren','Import sources')});c.createEl('p',{text:kl('Notizen und Exportdateien gezielt auswählen, Vorschau prüfen und nur die gewünschten Quellen übernehmen. Originale bleiben unverändert.','Select notes and export files, review the preview and import only the sources you choose. Originals stay unchanged.')});
+    const originLabel=c.createEl('label',{cls:'kf-form-field'});originLabel.createSpan({text:kl('Herkunft / Autor (optional)','Origin / author (optional)')});const origin=originLabel.createEl('input',{type:'text'});origin.maxLength=240;
+    const dateLabel=c.createEl('label',{cls:'kf-form-field'});dateLabel.createSpan({text:kl('Quelldatum, falls unbekannt (optional)','Source date if unknown (optional)')});const date=dateLabel.createEl('input',{type:'date'});
+    const notes=c.createEl('details');notes.createEl('summary',{text:kl('Notizen aus diesem Vault auswählen','Choose notes from this vault')});const search=notes.createEl('input',{type:'search',placeholder:kl('Dateinamen filtern …','Filter filenames …'),attr:{'aria-label':kl('Notizen filtern','Filter notes')}}),list=notes.createDiv({cls:'kf-import-notes'}),noteCount=notes.createEl('p',{attr:{role:'status'}});
+    const eligible=this.plugin.app.vault.getMarkdownFiles().filter(f=>kbImportNotePath(f.path)).map(f=>f.path).sort();
+    const renderNotes=()=>{list.empty();const terms=searchText(search.value),filtered=eligible.filter(path=>searchText(path).includes(terms));for(const path of filtered.slice(this.offset,this.offset+40)){const label=list.createEl('label',{cls:'kf-kb-check'}),check=label.createEl('input',{type:'checkbox'});check.checked=this.selected.has(path);label.createSpan({text:path});check.onchange=()=>{if(check.checked&&this.selected.size>=KB_IMPORT_MAX){check.checked=false;new Notice(kl('Höchstens 20 Notizen auswählen.','Select at most 20 notes.'));return;}if(check.checked)this.selected.add(path);else this.selected.delete(path);invalidate();renderNotes();};}noteCount.setText(this.selected.size+kl(' ausgewählt · ',' selected · ')+Math.min(this.offset+40,filtered.length)+' / '+filtered.length);previous.disabled=this.offset===0;next.disabled=this.offset+40>=filtered.length;};
+    const page=notes.createDiv({cls:'kf-kb-actions'}),previous=button(page,kl('Zurück','Previous'),()=>{this.offset=Math.max(0,this.offset-40);renderNotes();},'kf-text-button'),next=button(page,kl('Weiter','Next'),()=>{this.offset+=40;renderNotes();},'kf-text-button');search.oninput=()=>{this.offset=0;renderNotes();};
+    const uploadLabel=c.createEl('label',{cls:'kf-form-field'});uploadLabel.createSpan({text:kl('Exportdateien (.md, .txt, .json)','Export files (.md, .txt, .json)')});const upload=uploadLabel.createEl('input',{type:'file',attr:{accept:'.md,.txt,.json',multiple:''}}),fileStatus=c.createEl('p',{attr:{role:'status'}});upload.onchange=()=>{this.files=Array.from(upload.files||[]);fileStatus.setText(this.files.map(f=>f.name).join(' · ')||kl('Keine Dateien ausgewählt.','No files selected.'));invalidate();};
+    c.createEl('p',{text:kl('ChatGPT-/Claude-JSON und KnowledgeFlow Chat v1. ZIP vorher entpacken; Anhänge werden nicht geladen. Maximal 8 MiB je Datei, 16 MiB zusammen; 20 Quellen pro Import.','ChatGPT/Claude JSON and KnowledgeFlow Chat v1. Extract ZIP files first; attachments are not loaded. At most 8 MiB per file, 16 MiB total; 20 sources per import.'),cls:'kf-muted'});
+    const error=c.createDiv({attr:{role:'alert'}}),prepare=button(c,kl('Vorschau erstellen','Prepare preview'),async()=>{const generation=++this.generation;if(this.planId)this.plugin.kbImportPreviews?.delete(this.planId);this.planId=null;prepare.disabled=true;error.empty();preview.empty();try{
+      const inputs=[...[...this.selected].map(path=>({kind:'vault',path})),...await kbReadImportFiles(this.files)];
+      const plan=await kbPrepareSourceImport(this.plugin,inputs,{origin:origin.value,sourceDate:date.value});if(!this.alive||generation!==this.generation){this.plugin.kbImportPreviews?.delete(plan.id);return;}this.planId=plan.id;this.renderPreview(preview,plan,error);
+    }catch(e){if(this.alive&&generation===this.generation)error.setText(e.message);}finally{if(this.alive)prepare.disabled=false;}},'kf-primary'),preview=c.createDiv({cls:'kf-import-preview'});
+    const invalidate=()=>{this.generation++;if(this.planId)this.plugin.kbImportPreviews?.delete(this.planId);this.planId=null;preview.empty();error.empty();};origin.oninput=invalidate;date.onchange=invalidate;renderNotes();
+  }
+  renderPreview(parent,plan,error){
+    const chosen=new Set(plan.rows.filter(r=>['new','revision'].includes(r.status)).slice(0,KB_IMPORT_MAX).map(r=>r.key)),status=parent.createEl('p',{attr:{role:'status','aria-live':'polite'}});for(const message of plan.errors)parent.createEl('p',{text:message,cls:'kf-import-error'});
+    const labels={new:kl('Neue Quelle','New source'),revision:kl('Neue Fassung','New revision'),duplicate:kl('Bereits vorhanden','Already exists'),conflict:kl('Dateikonflikt','File conflict'),'batch-duplicate':kl('Gleicher Inhalt in dieser Auswahl','Same content in selection')};
+    for(const row of plan.rows){const card=parent.createEl('section',{cls:'kf-journal-file'}),label=card.createEl('label',{cls:'kf-kb-check'}),check=label.createEl('input',{type:'checkbox'});check.checked=chosen.has(row.key);check.disabled=['duplicate','conflict'].includes(row.status);label.createSpan({text:row.title+' · '+labels[row.status]});card.createEl('p',{text:row.author+' · '+row.origin+' · '+(row.sourceDate||kl('Datum unbekannt','Date unknown'))});if(row.dateBasis==='file-modified')card.createEl('p',{text:kl('Datum ist der Dateiänderungszeitpunkt, kein belegtes Erstellungsdatum.','Date is the file modification time, not an asserted creation date.'),cls:'kf-muted'});for(const warning of row.warnings)card.createEl('p',{text:warning,cls:'kf-muted'});if(row.duplicatePath)card.createEl('p',{text:kl('Vorhandene Quelle: ','Existing source: ')+row.duplicatePath});const detail=card.createEl('details');detail.createEl('summary',{text:kl('Inhalt ansehen','Review content')});const body=['chatgpt-json','claude-json','knowledgeflow-chat-v1'].includes(row.format)?kbImportTranscript(row.body,row.format):row.body;detail.createEl('pre',{text:body,cls:'kf-import-body'});check.onchange=()=>{if(check.checked&&chosen.size>=KB_IMPORT_MAX){check.checked=false;error.setText(kl('Höchstens 20 Quellen auswählen.','Select at most 20 sources.'));return;}if(check.checked)chosen.add(row.key);else chosen.delete(row.key);update();};}
+    const commit=button(parent,kl('Ausgewählte Quellen importieren','Import selected sources'),async()=>{commit.disabled=true;error.empty();try{const result=await kbCommitSourceImport(this.plugin,plan.id,[...chosen]);parent.empty();this.planId=null;parent.createEl('p',{text:result.imported.length+kl(' importiert · ',' imported · ')+result.skipped.length+kl(' Duplikate übersprungen',' duplicates skipped'),attr:{role:'status'}});button(parent,kl('Zu den Quellen','Open sources'),()=>{for(const leaf of this.plugin.app.workspace.getLeavesOfType(VIEW))leaf.view.openKnowledge('inbox');this.close();},'kf-text-button');}catch(e){error.setText(e.message);commit.disabled=false;}},'kf-primary');
+    const update=()=>{status.setText(chosen.size+kl(' zur Übernahme ausgewählt · ',' selected for import · ')+plan.rows.filter(r=>r.status==='duplicate').length+kl(' bereits vorhanden',' already exist'));commit.disabled=!chosen.size;};update();
+  }
+  onClose(){this.alive=false;this.generation++;if(this.planId)this.plugin.kbImportPreviews?.delete(this.planId);}
 }
 
 class KnowledgeCapture extends Modal{
@@ -688,7 +809,7 @@ function kbSafeWritePath(path){
   if(typeof path!=='string'||!path.startsWith(KB_ROOT+'/')||/[\\\x00-\x1f:%?#]/.test(path)||!path.endsWith('.md'))return false;
   const parts=path.split('/');return parts.every(p=>p&&p!=='.'&&p!=='..'&&p.trim()===p&&!p.endsWith('.'))&&['Quellen','Entwuerfe','Seiten','Verlauf','Protokoll'].includes(parts[2])&&parts.length===4;
 }
-function kbActionLabel(action){return ({capture:kl('Quelle erfassen','Capture source'),draft:kl('Entwurf speichern','Save draft'),publish:kl('Wissen übernehmen','Publish knowledge'),annotate:kl('Ergänzungen speichern','Save annotations'),archive:kl('Archivieren','Archive'),restore:kl('Wiederherstellen','Restore')})[action]||action;}
+function kbActionLabel(action){return ({import:kl('Quellen importieren','Import sources'),capture:kl('Quelle erfassen','Capture source'),draft:kl('Entwurf speichern','Save draft'),publish:kl('Wissen übernehmen','Publish knowledge'),annotate:kl('Ergänzungen speichern','Save annotations'),archive:kl('Archivieren','Archive'),restore:kl('Wiederherstellen','Restore')})[action]||action;}
 async function kbSeal(payload){return JSON.stringify({format:'knowledgeflow-journal-v1',payload,sha256:await kbHash(JSON.stringify(payload))},null,2)+'\n';}
 async function kbUnseal(raw){
   if(typeof raw!=='string'||raw.length>16000000)throw new Error('Invalid journal size');const envelope=JSON.parse(raw);
@@ -754,6 +875,8 @@ class KnowledgeTransactionReview extends Modal{
 // Install methods on the independent fork only. No automatic migration or remote AI calls.
 function installKnowledge(PluginClass,ViewClass){
   Object.assign(PluginClass.prototype,{
+    kbPrepareImport(inputs,options){return kbPrepareSourceImport(this,inputs,options);},
+    kbImportSelected(id,keys){return kbCommitSourceImport(this,id,keys);},
     async kbScan(){
       const generation=(this.kbGeneration||0)+1;this.kbGeneration=generation;if(this.kbJournalInvalid?.length){this.knowledge=[];this.knowledgeInvalid=this.kbJournalInvalid.map(item=>({...item,error:kl('Änderungsprotokoll prüfen: ','Review change log: ')+item.error}));return;}const records=[],invalid=[],pending=new Set((this.kbTransactions||[]).filter(e=>!e.done).flatMap(e=>e.paths||[]));
       for(const file of this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_ROOT+'/')&&!f.path.startsWith(KB_ROOT+'/Protokoll/')&&!f.path.startsWith(KB_ROOT+'/Verlauf/')&&!f.path.startsWith(KB_JOURNAL+'/'))){try{if(pending.has(file.path))throw new Error(kl('Unterbrochene Änderung: im Änderungsprotokoll prüfen.','Interrupted transaction: review the change log.'));const raw=await this.app.vault.read(file);if(!raw.includes('knowledgeflowKnowledge:')&&!raw.includes('"knowledgeflowKnowledge"'))continue;const parsed=kbDecode(raw);if(parsed.meta.kind==='source'&&await kbHash(parsed.body)!==parsed.meta.revision)throw new Error('Source text was changed');records.push({file,raw,...parsed});}catch(e){invalid.push({path:file.path,error:e.message});}}
@@ -828,7 +951,7 @@ function installKnowledge(PluginClass,ViewClass){
       const pending=(this.plugin.kbTransactions||[]).filter(e=>!e.done),invalid=this.plugin.kbJournalInvalid||[];
       if(pending.length||invalid.length){const warning=c.createDiv({cls:'kf-journal-warning',attr:{role:'alert'}});warning.createEl('p',{text:kl('Wissensänderungen pausiert: unterbrochene oder nicht lesbare Vorgänge prüfen.','Knowledge writes paused: review interrupted or unreadable operations.')});button(warning,kl('Änderungsprotokoll öffnen','Open change log'),()=>this.openKnowledge('changes'),'kf-text-button');}
       if(this.kbTab==='changes'){this.renderKnowledgeChanges(c);return;}
-      const toolbar=c.createDiv({cls:'kf-kb-toolbar'});button(toolbar,kl('+ Quelle erfassen','+ Capture source'),()=>new KnowledgeCapture(this.plugin).open(),'kf-primary');button(toolbar,kl('+ Wissensentwurf','+ Knowledge draft'),()=>new KnowledgeDraft(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Entwurf importieren','Import AI draft'),()=>new KnowledgeImport(this.plugin).open(),'kf-text-button');
+      const toolbar=c.createDiv({cls:'kf-kb-toolbar'});button(toolbar,kl('Quellen importieren','Import sources'),()=>new KnowledgeSourceImport(this.plugin).open(),'kf-text-button');button(toolbar,kl('+ Quelle erfassen','+ Capture source'),()=>new KnowledgeCapture(this.plugin).open(),'kf-primary');button(toolbar,kl('+ Wissensentwurf','+ Knowledge draft'),()=>new KnowledgeDraft(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Entwurf importieren','Import AI draft'),()=>new KnowledgeImport(this.plugin).open(),'kf-text-button');
       c.createEl('p',{text:kl('Lokal gespeichertes Wissen mit Quellen, eigenen Ergänzungen und bewusster Freigabe. Keine automatische KI-Verarbeitung.','Local knowledge with sources, your annotations and explicit review. No automatic AI processing.'),cls:'kf-muted'});
       if(this.plugin.knowledgeInvalid?.length){const box=c.createEl('details');box.createEl('summary',{text:kl('Nicht lesbare oder veränderte Dateien: ','Unreadable or altered files: ')+this.plugin.knowledgeInvalid.length});for(const item of this.plugin.knowledgeInvalid)box.createEl('p',{text:item.path+' · '+item.error});}
       if(this.kbTab==='health'){const findings=kbHealth(records);c.createEl('h2',{text:kl('Prüfbedarf','Needs review')});if(!findings.length)c.createEl('p',{text:kl('Keine fehlenden Quellen, neueren Quellenversionen, gleichen Titel oder defekten Seitenbezüge gefunden. Dies prüft keine inhaltliche Wahrheit.','No missing sources, newer revisions, duplicate titles or broken page references found. This does not verify factual truth.')});for(const finding of findings){const row=c.createDiv({cls:'kf-kb-card'});row.createSpan({text:finding.message});const record=records.find(r=>r.meta.id===finding.id);if(record)button(row,kl('Öffnen','Open'),()=>this.plugin.app.workspace.getLeaf(false).openFile(record.file),'kf-text-button');}return;}
@@ -851,10 +974,12 @@ function installKnowledge(PluginClass,ViewClass){
       if(all.filter(e=>e.done).length>limit)button(c,kl('Weitere 30 anzeigen','Show 30 more'),()=>{this.kbJournalLimit=limit+30;this.render();},'kf-text-button');
     },
     knowledgeCard(c,record,records){
-      const card=c.createEl('article',{cls:'kf-kb-card'});card.createSpan({text:kbLabel(record.meta.kind)+' · '+kbLabel(record.meta.state),cls:'kf-eyebrow'});card.createEl('h2',{text:record.meta.title});card.createEl('p',{text:kbExcerpt(record.body,this.kbQuery||'')});
+      const card=c.createEl('article',{cls:'kf-kb-card'});card.createSpan({text:kbLabel(record.meta.kind)+' · '+kbLabel(record.meta.state),cls:'kf-eyebrow'});card.createEl('h2',{text:record.meta.title});card.createEl('p',{text:kbExcerpt(kbSourceDisplay(record),this.kbQuery||'')});
       card.createEl('p',{text:[record.meta.area,...(record.meta.tags||[])].filter(Boolean).join(' · '),cls:'kf-muted'});
       const actions=card.createDiv({cls:'kf-kb-actions'});button(actions,kl('Originalnotiz öffnen','Open Markdown note'),()=>this.plugin.app.workspace.getLeaf(false).openFile(record.file),'kf-text-button');
-      if(record.meta.kind==='source'){card.createEl('p',{text:kl('Version: ','Revision: ')+record.meta.revision.slice(0,12)+' · '+(record.meta.url||record.meta.author||kl('Eigene Quelle','Own source')),cls:'kf-muted'});button(actions,kl('Wissen daraus erstellen','Prepare knowledge draft'),()=>new KnowledgeDraft(this.plugin,record).open(),'kf-text-button');button(actions,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin,record).open(),'kf-text-button');}
+      if(record.meta.kind==='source'){
+        if(record.meta.importInfo?.version===1){const info=record.meta.importInfo;card.createEl('p',{text:kl('Herkunft: ','Origin: ')+String(info.origin||'')});card.createEl('p',{text:(info.dateBasis==='file-modified'?kl('Datei geändert: ','File modified: '):kl('Quelldatum: ','Source date: '))+(info.sourceDate||kl('unbekannt','unknown'))+' · '+kl('Importiert: ','Imported: ')+String(info.importedAt||record.meta.created)});const content=card.createEl('details');content.createEl('summary',{text:kl('Importierten Inhalt ansehen','Review imported content')});content.createEl('pre',{text:kbSourceDisplay(record),cls:'kf-import-body'});}
+        card.createEl('p',{text:kl('Version: ','Revision: ')+record.meta.revision.slice(0,12)+' · '+(record.meta.url||record.meta.author||kl('Eigene Quelle','Own source')),cls:'kf-muted'});button(actions,kl('Wissen daraus erstellen','Prepare knowledge draft'),()=>new KnowledgeDraft(this.plugin,record).open(),'kf-text-button');button(actions,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin,record).open(),'kf-text-button');}
       else if(record.meta.state==='review')button(actions,kl('Vorschlag prüfen','Review proposal'),()=>new KnowledgeReview(this.plugin,record).open(),'kf-primary');
       else if(record.meta.state==='archived'&&record.meta.reviewedAt&&!record.meta.publishedTarget)button(actions,kl('Wiederherstellen','Restore'),async()=>{try{await this.plugin.kbReactivate(record);}catch(e){report(e);}},'kf-text-button');
       else if(record.meta.state==='published'){
@@ -1635,7 +1760,7 @@ class KnowledgeFlow extends Plugin {
     const observer=new MutationObserver(()=>this.refreshPreferences());observer.observe(document.body,{attributes:true,attributeFilter:['class']});this.register(()=>observer.disconnect());
     const refresh=()=>{clearTimeout(this.timer);this.timer=setTimeout(()=>this.scan().catch(report),180);};
     for(const event of ['create','modify','delete','rename'])this.registerEvent(this.app.vault.on(event,refresh));
-    this.register(()=>{this.stopped=true;this.scanVersion++;clearTimeout(this.timer);});this.registerInterval(window.setInterval(()=>this.scan().catch(report),60000));this.app.workspace.onLayoutReady(()=>this.scan().catch(report));
+    this.register(()=>{this.stopped=true;this.scanVersion++;clearTimeout(this.timer);this.kbImportPreviews?.clear();});this.registerInterval(window.setInterval(()=>this.scan().catch(report),60000));this.app.workspace.onLayoutReady(()=>this.scan().catch(report));
   }
   refreshPreferences(){uiLanguage=effectivePreferences(this).language;for(const leaf of this.app.workspace.getLeavesOfType(VIEW))leaf.view.render();for(const root of document.querySelectorAll('.modal .kf-editor-modal'))applyPreferences(root,this);}
   async savePreferences(draft,expected){
@@ -1824,3 +1949,7 @@ Object.assign(module.exports.testing,{renderKnowledgeGraph});
 Object.assign(module.exports.testing,{kbDailyWelcome,kbDrawCosmos});
 
 Object.assign(module.exports.testing,{KB_JOURNAL,kbSafeWritePath,kbSeal,kbUnseal,kbValidatePlan,kbReadJournal,kbInspectTransaction,kbReceipt,kbApplyTransaction,KnowledgeTransactionReview});
+
+Object.assign(module.exports.testing,{KB_IMPORT_MAX,kbImportDate,kbStableJSON,kbImportNotePath,kbChatMessages,kbParseImportFile,kbImportTranscript,kbPrepareSourceImport,kbCommitSourceImport,kbSourceDisplay,KnowledgeSourceImport});
+
+Object.assign(module.exports.testing,{kbReadImportFiles});

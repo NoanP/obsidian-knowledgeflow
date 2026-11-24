@@ -1,10 +1,16 @@
-# KnowledgeFlow 1.4
+# KnowledgeFlow 1.5
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.4: reliable knowledge changes
+## New in 1.5: selected source import
+
+Open **Wissen & Quellen → Quellen importieren / Knowledge & sources → Import sources**. Select Markdown notes by filename or choose local `.md`, `.txt` and supported chat `.json` files. Review conversations individually, exact duplicate/new-version indicators, provenance and dates, then explicitly import up to 20 selected sources. Originals are never edited. Import writes use the 1.4 journal and recovery flow.
+
+Text notes retain their exact decoded UTF-8 text. ChatGPT/Claude conversation JSON and the documented KnowledgeFlow Chat v1 format become canonical JSON conversation snapshots, with a readable text preview. This is not a verbatim copy of the entire export archive. Attachments and URLs are not fetched; ZIP files must be extracted first. Unsupported structures and partial format errors are listed for review. See [formats, dates, limits and examples](docs/SOURCE-IMPORT.md).
+
+## Reliable knowledge changes (1.4)
 
 Open **Wissen & Quellen → Änderungsprotokoll / Knowledge & sources → Change log** to inspect before/after versions, resume interrupted operations after a fresh review, or load previous published content as a new draft. Before changing a source/draft/page, KnowledgeFlow persists a local write-ahead plan with content snapshots and SHA-256 checks. Pending or invalid operations block further knowledge writes; partial records stay out of the knowledge index. Recovery preserves divergent external edits and requires manual conflict resolution. Source dependencies are checked as well as output files.
 
@@ -55,7 +61,7 @@ Open [`preview/index.html`](preview/index.html) in a desktop browser, or run `np
 
 ## Optional installation later
 
-**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.4.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
+**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.5.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
 
 Native Obsidian and mobile validation are not completed for 1.0. The inherited task layer has automated coverage; the new knowledge workflow is tested through an in-memory vault and browser simulation. Cross-device conflicts and process/power failures are not atomic transactions. Use normal backups before any later real-vault pilot.
 

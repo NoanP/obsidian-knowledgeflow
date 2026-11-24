@@ -7,12 +7,12 @@
 | 1.2 | Spatial 3D knowledge explorer |
 | 1.3 | Approved cosmic homepage with small navigation tiles |
 | 1.4 | Persistent knowledge change journal, conflict checks and reviewed recovery |
+| 1.5 | Selected note/chat import with provenance, dates, exact deduplication and journal recovery |
 
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |
 | --- | --- | --- |
-| Selected-source import | Notes and chat exports with provenance, dates and deduplication | Source mapping preview; originals retained |
 | Source-backed search | Read-only questions with traceable supporting notes and sources | Representative question set and measured retrieval failures |
 | Knowledge quality | Broken links, similar content and conflicting claims | Explicit evidence; avoid invented certainty |
 | Knowledge and projects | Proposed decisions/actions connected to existing projects | Explicit review through the board task workflow |
