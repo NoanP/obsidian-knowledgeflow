@@ -646,3 +646,9 @@
 
 /* Read-only knowledge quality candidates. */
 .kf-quality{max-width:1100px}.kf-quality>p{line-height:1.7;color:var(--kf-quiet)}.kf-quality>.kf-kb-toolbar{margin:18px 0}.kf-quality-finding{padding:18px 0;border-bottom:1px solid var(--kf-line);overflow-wrap:anywhere}.kf-root .kf-quality-finding h3{font-size:16px!important;line-height:1.5;margin:0 0 8px!important}.kf-quality-finding p{font-size:13px;line-height:1.8;margin:8px 0}.kf-quality select{max-width:100%;background:var(--background-secondary);border:1px solid var(--kf-line);border-radius:7px;color:var(--kf-ink);padding:8px 10px}.kf-quality-evidence{margin:18px 0;overflow-wrap:anywhere}.kf-quality-evidence>p{font-size:12px;line-height:1.7}.kf-quality-scope{margin-top:20px;color:var(--kf-quiet);font-size:12px;line-height:1.8}.kf-quality-scope summary{cursor:pointer}.kf-quality-scope p{margin:10px 0}
+
+/* Knowledge-to-work links remain quiet and inherit the surrounding theme. */
+.kf-knowledge-relations { margin-block: 0.7rem; color: var(--text-muted); }
+.kf-knowledge-relations > .kf-text-button { display: block; text-align: start; max-width: 100%; white-space: normal; }
+.kf-knowledge-relations summary { cursor: pointer; }
+.kf-knowledge-relations .kf-answer-quote { color: var(--text-normal); }

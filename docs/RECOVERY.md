@@ -12,7 +12,7 @@ An invalid journal pauses the entire knowledge index until resolved; its affecte
 
 ## Persisted protocol
 
-- Scope: `KnowledgeFlow/Wissen/{Quellen,Entwuerfe,Seiten,Verlauf,Protokoll}`. Source snapshots remain create-only. Tasks, recurrence, project settings, plugin settings and trash operations are outside this transaction layer.
+- Scope: `KnowledgeFlow/Wissen/{Quellen,Entwuerfe,Seiten,Verlauf,Protokoll}`. Source snapshots remain create-only. Version 1.8 adds the narrowly validated `task-approve` action: one create-only owned task and audit, with published-note/source pins and a reviewed project snapshot. Other task edits, recurrence, project settings, plugin settings and trash operations remain outside this transaction layer.
 - `Aenderungen/<uuid>.md` is a sealed JSON plan with schema marker, action/time, exact original and intended text, SHA-256 per version, source-dependency hashes and vault/root binding. It is created before any record writes.
 - The desktop binding hashes the vault base path and owned root. When no base path is available, it hashes the vault name and root; this fallback cannot distinguish two vaults with the same name. Renaming/moving a vault may intentionally block replay of its older plans. Inspect and recover before moving the vault; manually review moved/foreign plans rather than editing their binding blindly.
 - Plans accept at most 256 total writes and 16 million characters. Path scope, roles, duplicate paths and content hashes are revalidated when read. Checksums detect accidental damage; they are not signatures or a defense against someone who can rewrite vault files and recompute hashes.
@@ -28,3 +28,9 @@ Interrupted operations retain both saved snapshots and any partial output. They 
 Completed Vault calls are the persistence boundary available to this plugin. It cannot force filesystem flushes, atomically commit multiple files, prevent all sync races, replace an independent backup or reconstruct a lost/corrupt journal. Recovery has automated simulated-interruption coverage, not certification against power loss or arbitrary storage corruption. Multi-device editing remains an external coordination concern.
 
 Plans contain local copies of original and new text, including annotations. They share the vault's existing storage/sync/backup permissions and are not separately encrypted. No external transmission is added. History is never silently pruned, so storage grows with edits; retention management is a future explicit feature.
+
+## Task suggestion approvals (1.8)
+
+A failed approval refreshes the change log even when an API failed after persisting. Its task output is withheld from the task view until a matching completion receipt exists. Open the saved transaction, compare the reviewed task text and dependencies, then explicitly resume. Already-written task bytes are verified and skipped; recovery never creates a second task. Changed note/source bytes, divergent task content, a changed project or task-folder setting block recovery. Resolve these conflicts deliberately; do not edit sealed plans to bypass them. A matching receipt after a lost API response counts as completed.
+
+When the journal is invalid, generated `knowledge-<hash>` tasks are withheld as well as the knowledge index because affected task paths cannot be trusted. Independent ordinary tasks keep their existing behavior. A later legitimate project rename or folder change does not invalidate a completed historical plan. Completed task creations do not have a previous task version: use the normal recoverable task trash for undo. General project/task operations do not acquire full journal rollback by this release.

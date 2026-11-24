@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-24
+
+### Added
+- Bidirectional knowledge/work navigation: published notes show linked tasks and their project; projects list linked published notes; task cards expose knowledge links. Completed tasks remain visible as backlinks; trashed/superseded/skipped tasks are excluded.
+- Read-only suggestions from unchecked checklist lines in selected or published owned knowledge. Individual review shows a pinned literal passage and editable task title, project, priority, due date and notes. No automatic task creation, date inference, assignments or provider calls.
+- Create-only approval transactions with immutable plans, exact note/source dependency hashes, project snapshots, audited completion receipts and existing explicit recovery UI. Partial task outputs are withheld until recovery completes.
+- Stable approval identity across repeated clicks, reloads, edits, archive and trash; same-title open tasks in the chosen project block accidental duplication. Existing notes and source snapshots remain unchanged.
+- Task editor shows approval provenance and can verify the original passage against its recorded version.
+
+### Boundaries and validation
+- 252 automated tests pass, including stale notes/sources/projects, forged passages, concurrent approvals, response loss after writes/receipts, reviewed recovery, path collisions and untouched outside content. Isolated in-memory browser acceptance checks the actual review and relationship workflow.
+- Suggestions are temporary review candidates, limited to 100 notes and 200 unique checklist candidates per window. Hiding is session-only; arbitrary prose/semantic action extraction and persistent rejection queues are not included.
+- Approval identity normalizes a checklist title within its note path/ID; duplicate equal lines are one candidate. A renamed action or moved note may become a new candidate; title checks are conservative, not semantic deduplication. Permanent removal of both the task and its provenance can permit regeneration.
+- Only suggestion creation joins the journal. Ordinary task/project/settings changes keep their existing behavior. No cross-device locking or filesystem atomicity claim.
+- Repository-only release; no TaskFlow or Obsidian changes. Native Obsidian/mobile and real-vault acceptance remain separately scoped.
+
 ## [1.7.0] - 2026-11-24
 
 ### Added

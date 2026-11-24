@@ -1,10 +1,18 @@
-# KnowledgeFlow 1.7
+# KnowledgeFlow 1.8
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.7: knowledge quality review
+## New in 1.8: connect knowledge to work
+
+Published knowledge cards show their project and linked tasks, including completed tasks. Projects list their linked knowledge; task cards and editors retain direct knowledge links. Existing tasks can be linked through **Wissen verknüpfen / Link knowledge**, and a knowledge draft can assign its project before publishing.
+
+Choose **Aufgabenvorschläge / Task suggestions** in Knowledge & sources, or **Aufgaben vorschlagen / Suggest tasks** on an individual published note. Only unchecked Markdown checklist lines become local review candidates. Inspect the exact passage, adjust the title/project/priority/due date/note, then explicitly choose **Freigeben und Aufgabe erstellen / Approve and create task**. Closing or hiding does not create a task. Hiding lasts for the current window; there is no persistent rejection queue or AI provider.
+
+Approved tasks store exact provenance and a stable approval identity. Their creation is journaled with pinned note/source dependencies, conflict checks and explicit recovery. Read [workflow, safeguards and limits](docs/KNOWLEDGE-WORK.md). TaskFlow and existing Obsidian installations are untouched.
+
+## Knowledge quality review (1.7)
 
 Open **Wissen & Quellen → Pflege / Knowledge & sources → Health** and choose **Wissen prüfen / Check knowledge**. The local report groups broken/ambiguous links, similar word sequences, possible rule/numeric conflicts and existing review needs. Each candidate opens pinned evidence, with both passages for comparisons. Reports do not edit, merge, delete or declare any source true.
 

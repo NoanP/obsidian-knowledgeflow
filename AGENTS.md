@@ -43,3 +43,10 @@ not semantic equivalence. Opposite-rule/numeric templates may produce possible-c
 candidates only, with both exact passages and context. Never label them confirmed
 contradictions, merge content, repair links or choose a winning source automatically.
 External link targets may use file metadata; never read unimported note bodies.
+
+Knowledge-to-task conversion is explicit review only. Suggestions do not write files or
+become tasks on opening. Derive only unchecked lines from published owned knowledge;
+retain literal version-pinned evidence. Approval plans may create exactly one owned task
+and audit file, never edit a task/source. Pin its note/source dependencies and selected
+project snapshot, use a stable provenance key and quarantine unfinished task outputs.
+Ordinary task/project/settings writes are not covered by this new transaction action.

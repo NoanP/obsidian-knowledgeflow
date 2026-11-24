@@ -1040,7 +1040,7 @@ function kbSafeWritePath(path){
   if(typeof path!=='string'||!path.startsWith(KB_ROOT+'/')||/[\\\x00-\x1f:%?#]/.test(path)||!path.endsWith('.md'))return false;
   const parts=path.split('/');return parts.every(p=>p&&p!=='.'&&p!=='..'&&p.trim()===p&&!p.endsWith('.'))&&['Quellen','Entwuerfe','Seiten','Verlauf','Protokoll'].includes(parts[2])&&parts.length===4;
 }
-function kbActionLabel(action){return ({import:kl('Quellen importieren','Import sources'),capture:kl('Quelle erfassen','Capture source'),draft:kl('Entwurf speichern','Save draft'),publish:kl('Wissen übernehmen','Publish knowledge'),annotate:kl('Ergänzungen speichern','Save annotations'),archive:kl('Archivieren','Archive'),restore:kl('Wiederherstellen','Restore')})[action]||action;}
+function kbActionLabel(action){return ({import:kl('Quellen importieren','Import sources'),capture:kl('Quelle erfassen','Capture source'),draft:kl('Entwurf speichern','Save draft'),publish:kl('Wissen übernehmen','Publish knowledge'),annotate:kl('Ergänzungen speichern','Save annotations'),archive:kl('Archivieren','Archive'),restore:kl('Wiederherstellen','Restore'),'task-approve':kl('Aufgabenvorschlag freigeben','Approve task suggestion')})[action]||action;}
 async function kbSeal(payload){return JSON.stringify({format:'knowledgeflow-journal-v1',payload,sha256:await kbHash(JSON.stringify(payload))},null,2)+'\n';}
 async function kbUnseal(raw){
   if(typeof raw!=='string'||raw.length>16000000)throw new Error('Invalid journal size');const envelope=JSON.parse(raw);
@@ -1051,9 +1051,10 @@ async function kbVaultIdentity(plugin){const vault=plugin.app.vault,base=vault.a
 async function kbReadCurrent(plugin,path){const file=plugin.app.vault.getAbstractFileByPath(path);return file?await plugin.app.vault.read(file):null;}
 async function kbValidatePlan(plugin,plan,path){
   if(plan?.knowledgeflowTransaction!==1||!/^[-a-z0-9]{36}$/.test(plan.id)||path!==KB_JOURNAL+'/'+plan.id+'.md'||plan.root!==KB_ROOT||plan.vault!==await kbVaultIdentity(plugin)||!Array.isArray(plan.writes)||!plan.writes.length||plan.writes.length>256||typeof plan.action!=='string'||typeof plan.created!=='string')throw new Error('Invalid journal or different vault identity');
-  if(!Array.isArray(plan.reads)||plan.reads.length>512)throw new Error('Invalid source checks');for(const read of plan.reads)if(!kbSafeWritePath(read.path)||!read.path.startsWith(KB_ROOT+'/Quellen/')||!/^([0-9a-f]{64})$/.test(read.hash))throw new Error('Invalid source dependency');
+  if(plan.action==='task-approve')await kbValidateTaskApprovalPlan(plugin,plan);
+  if(!Array.isArray(plan.reads)||plan.reads.length>512)throw new Error('Invalid source checks');for(const read of plan.reads)if(!kbSafeWritePath(read.path)||!(read.path.startsWith(KB_ROOT+'/Quellen/')||plan.action==='task-approve'&&read.path.startsWith(KB_ROOT+'/Seiten/'))||!/^([0-9a-f]{64})$/.test(read.hash))throw new Error('Invalid source dependency');
   const seen=new Set();for(const w of plan.writes){
-    const key=typeof w.path==='string'?w.path.normalize('NFC').toLowerCase():'';if(!kbSafeWritePath(w.path)||seen.has(key)||!(w.before===null||typeof w.before==='string')||typeof w.after!=='string'||!['record','history','audit'].includes(w.role))throw new Error('Unsafe journal write plan');seen.add(key);if((w.role==='history')!==w.path.startsWith(KB_ROOT+'/Verlauf/')||(w.role==='audit')!==w.path.startsWith(KB_ROOT+'/Protokoll/'))throw new Error('Invalid journal write role');
+    const key=typeof w.path==='string'?w.path.normalize('NFC').toLowerCase():'';if(!(kbSafeWritePath(w.path)||plan.action==='task-approve'&&w.role==='task'&&w.path===plan.approval.folder+'/knowledge-'+plan.approval.key+'.md')||seen.has(key)||!(w.before===null||typeof w.before==='string')||typeof w.after!=='string'||!(['record','history','audit'].includes(w.role)||plan.action==='task-approve'&&w.role==='task'))throw new Error('Unsafe journal write plan');seen.add(key);if((w.role==='history')!==w.path.startsWith(KB_ROOT+'/Verlauf/')||(w.role==='audit')!==w.path.startsWith(KB_ROOT+'/Protokoll/'))throw new Error('Invalid journal write role');
     if(w.beforeHash!==(w.before===null?null:await kbHash(w.before))||w.afterHash!==await kbHash(w.after))throw new Error('Snapshot integrity check failed');
     if(w.path.startsWith(KB_ROOT+'/Quellen/')&&w.before!==null)throw new Error('Sources are immutable');
   }return plan;
@@ -1063,7 +1064,7 @@ async function kbInspectTransaction(plugin,id){
   if(!/^[-a-z0-9]{36}$/.test(id))throw new Error('Invalid transaction ID');const entry=await kbReadJournal(plugin,KB_JOURNAL+'/'+id+'.md'),items=[];
   for(const write of entry.plan.writes){const current=await kbReadCurrent(plugin,write.path);items.push({...write,currentHash:current===null?null:await kbHash(current),state:current===write.after?'after':current===write.before?'before':'conflict'});}
   const readChecks=[];for(const read of entry.plan.reads){const raw=await kbReadCurrent(plugin,read.path),currentHash=raw===null?null:await kbHash(raw);readChecks.push({...read,currentHash,state:currentHash===read.hash?'valid':'conflict'});}
-  const previewHash=await kbHash(JSON.stringify({planHash:entry.hash,files:items.map(w=>[w.path,w.currentHash]),reads:readChecks.map(r=>[r.path,r.currentHash])}));return {...entry,items,readChecks,previewHash};
+  const contextConflict=kbTaskContext(plugin,entry.plan);const previewHash=await kbHash(JSON.stringify({contextConflict,planHash:entry.hash,files:items.map(w=>[w.path,w.currentHash]),reads:readChecks.map(r=>[r.path,r.currentHash])}));return {...entry,items,readChecks,previewHash,contextConflict};
 }
 async function kbReceipt(plugin,entry){
   const path=KB_JOURNAL+'/'+entry.plan.id+'.done.md',raw=await kbReadCurrent(plugin,path);if(raw===null)return false;const data=await kbUnseal(raw);
@@ -1071,12 +1072,14 @@ async function kbReceipt(plugin,entry){
 }
 async function kbApplyTransaction(plugin,entry){
   const inspect=await kbInspectTransaction(plugin,entry.plan.id);if(inspect.hash!==entry.hash||inspect.previewHash!==entry.previewHash)throw new Error(kl('Dateien seit der Vorschau geändert. Erneut prüfen.','Files changed since preview. Review again.'));
+  if(inspect.contextConflict)throw Error(inspect.contextConflict);
   if(inspect.items.some(w=>w.state==='conflict')||inspect.readChecks.some(r=>r.state==='conflict'))throw new Error(kl('Konflikt: Eine Datei weicht von beiden gespeicherten Fassungen ab. Sie wird nicht überschrieben.','Conflict: a file differs from both saved versions. It will not be overwritten.'));
   for(const write of inspect.items){if(write.state==='after')continue;await plugin.kbFolder(write.path.slice(0,write.path.lastIndexOf('/')));const file=plugin.app.vault.getAbstractFileByPath(write.path);
     if(write.before===null){await plugin.app.vault.create(write.path,write.after);}else{
       if(!file)throw new Error('Target disappeared');await plugin.app.vault.process(file,raw=>{if(raw!==write.before)throw new Error('Concurrent change');return write.after;});
     }
   }
+  if(kbTaskContext(plugin,entry.plan))throw Error(kbTaskContext(plugin,entry.plan));
   // All writes, including audit/history, must match before completion is acknowledged.
   for(const write of inspect.items)if(await kbReadCurrent(plugin,write.path)!==write.after)throw new Error('Concurrent change during verification');
   for(const read of inspect.readChecks){const raw=await kbReadCurrent(plugin,read.path);if(raw===null||await kbHash(raw)!==read.hash)throw new Error('Source changed during verification');}
@@ -1098,7 +1101,7 @@ class KnowledgeTransactionReview extends Modal{
         if(done&&item.role==='record'&&item.before!==null){const current=(this.plugin.knowledge||[]).find(r=>r.file.path===item.path);if(current?.meta.state==='published'&&current.meta.kind!=='source')button(row,kl('Vorherige Fassung als Entwurf laden','Load previous version as a draft'),()=>{const editor=new KnowledgeDraft(this.plugin,null,current);editor.prefill=kbDecode(item.before);editor.open();this.close();},'kf-text-button');}
       }
       for(const read of entry.readChecks)c.createEl('p',{text:((this.plugin.knowledge||[]).find(r=>r.file.path===read.path)?.meta.title||read.path)+' · '+(read.state==='conflict'?kl('Quelle verändert','Source changed'):kl('Quelle geprüft','Source verified'))});
-      if(!done){const run=button(c,kl('Geprüfte Änderung fortsetzen','Continue reviewed change'),async()=>{run.disabled=true;try{await this.plugin.kbRecover(this.id,entry.previewHash);this.close();}catch(e){error.setText(e.message);}},'kf-primary');run.disabled=entry.items.some(w=>w.state==='conflict')||entry.readChecks.some(r=>r.state==='conflict');}
+      if(!done){const run=button(c,kl('Geprüfte Änderung fortsetzen','Continue reviewed change'),async()=>{run.disabled=true;try{await this.plugin.kbRecover(this.id,entry.previewHash);this.close();}catch(e){error.setText(e.message);}},'kf-primary');if(entry.contextConflict)c.createEl('p',{text:entry.contextConflict,attr:{role:'alert'}});run.disabled=!!entry.contextConflict||entry.items.some(w=>w.state==='conflict')||entry.readChecks.some(r=>r.state==='conflict');}
     }catch(e){error.setText(e.message);}
   }
 }
@@ -1120,7 +1123,7 @@ function installKnowledge(PluginClass,ViewClass){
     kbQueue(fn){const run=(this.kbWriteQueue||Promise.resolve()).catch(()=>{}).then(fn);this.kbWriteQueue=run;return run;},
     async kbJournalScan(){
       const generation=(this.kbJournalGeneration||0)+1;this.kbJournalGeneration=generation;const entries=[],invalid=[],files=this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_JOURNAL+'/'));
-      for(const file of files.filter(f=>!f.path.endsWith('.done.md'))){try{const entry=await kbReadJournal(this,file.path),done=await kbReceipt(this,entry);entries.push({id:entry.plan.id,action:entry.plan.action,created:entry.plan.created,count:entry.plan.writes.filter(w=>w.role==='record').length,paths:entry.plan.writes.filter(w=>w.role==='record').map(w=>w.path),done,path:file.path});}catch(e){invalid.push({path:file.path,error:e.message});}}
+      for(const file of files.filter(f=>!f.path.endsWith('.done.md'))){try{const entry=await kbReadJournal(this,file.path),done=await kbReceipt(this,entry);entries.push({id:entry.plan.id,action:entry.plan.action,created:entry.plan.created,count:entry.plan.writes.filter(w=>['record','task'].includes(w.role)).length,paths:entry.plan.writes.filter(w=>['record','task'].includes(w.role)).map(w=>w.path),done,path:file.path});}catch(e){invalid.push({path:file.path,error:e.message});}}
       for(const file of files.filter(f=>f.path.endsWith('.done.md'))){const planPath=file.path.replace(/\.done\.md$/,'.md');if(!this.app.vault.getAbstractFileByPath(planPath))invalid.push({path:file.path,error:'Receipt has no write plan'});}
       entries.sort((a,b)=>b.created.localeCompare(a.created));if(this.kbJournalGeneration===generation){this.kbTransactions=entries;this.kbJournalInvalid=invalid;}return {entries,invalid,pending:entries.filter(e=>!e.done)};
     },
@@ -1185,7 +1188,7 @@ function installKnowledge(PluginClass,ViewClass){
       if(pending.length||invalid.length){const warning=c.createDiv({cls:'kf-journal-warning',attr:{role:'alert'}});warning.createEl('p',{text:kl('Wissensänderungen pausiert: unterbrochene oder nicht lesbare Vorgänge prüfen.','Knowledge writes paused: review interrupted or unreadable operations.')});button(warning,kl('Änderungsprotokoll öffnen','Open change log'),()=>this.openKnowledge('changes'),'kf-text-button');}
       if(this.kbTab==='changes'){this.renderKnowledgeChanges(c);return;}
       if(this.kbTab==='ask'){renderKnowledgeQuestion(this,c);return;}
-      const toolbar=c.createDiv({cls:'kf-kb-toolbar'});button(toolbar,kl('Quellen importieren','Import sources'),()=>new KnowledgeSourceImport(this.plugin).open(),'kf-text-button');button(toolbar,kl('+ Quelle erfassen','+ Capture source'),()=>new KnowledgeCapture(this.plugin).open(),'kf-primary');button(toolbar,kl('+ Wissensentwurf','+ Knowledge draft'),()=>new KnowledgeDraft(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Entwurf importieren','Import AI draft'),()=>new KnowledgeImport(this.plugin).open(),'kf-text-button');
+      const toolbar=c.createDiv({cls:'kf-kb-toolbar'});button(toolbar,kl('Aufgabenvorschläge','Task suggestions'),()=>new KnowledgeTaskSuggestions(this.plugin).open(),'kf-text-button');button(toolbar,kl('Quellen importieren','Import sources'),()=>new KnowledgeSourceImport(this.plugin).open(),'kf-text-button');button(toolbar,kl('+ Quelle erfassen','+ Capture source'),()=>new KnowledgeCapture(this.plugin).open(),'kf-primary');button(toolbar,kl('+ Wissensentwurf','+ Knowledge draft'),()=>new KnowledgeDraft(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Entwurf importieren','Import AI draft'),()=>new KnowledgeImport(this.plugin).open(),'kf-text-button');
       c.createEl('p',{text:kl('Lokal gespeichertes Wissen mit Quellen, eigenen Ergänzungen und bewusster Freigabe. Keine automatische KI-Verarbeitung.','Local knowledge with sources, your annotations and explicit review. No automatic AI processing.'),cls:'kf-muted'});
       if(this.plugin.knowledgeInvalid?.length){const box=c.createEl('details');box.createEl('summary',{text:kl('Nicht lesbare oder veränderte Dateien: ','Unreadable or altered files: ')+this.plugin.knowledgeInvalid.length});for(const item of this.plugin.knowledgeInvalid)box.createEl('p',{text:item.path+' · '+item.error});}
       if(this.kbTab==='health'){renderKnowledgeQuality(this,c);return;}
@@ -1199,7 +1202,7 @@ function installKnowledge(PluginClass,ViewClass){
       if(filtered.length>(this.kbLimit||40))button(c,kl('Weitere 40 anzeigen','Show 40 more'),()=>{this.kbLimit=(this.kbLimit||40)+40;this.render();},'kf-text-button');
     },
     renderKnowledgeChanges(c){
-      c.createEl('p',{text:kl('Gespeicherte Wissensänderungen mit Vorher-/Nachher-Fassungen. Unterbrochene Vorgänge werden erst nach deiner Prüfung fortgesetzt. Aufgaben und Projekte verwenden weiterhin ihren bisherigen Verlauf.','Saved knowledge changes with before/after snapshots. Interrupted operations continue only after your review. Tasks and projects retain their existing behavior.')});
+      c.createEl('p',{text:kl('Gespeicherte Wissensänderungen mit Vorher-/Nachher-Fassungen. Unterbrochene Vorgänge werden erst nach deiner Prüfung fortgesetzt. Freigegebene Aufgabenvorschläge sind ebenfalls protokolliert. Andere Aufgaben- und Projektänderungen verwenden ihren bisherigen Verlauf.','Saved knowledge changes with before/after snapshots. Interrupted operations continue only after your review. Approved task suggestions are also journaled. Other task and project edits retain their existing behavior.')});
       button(c,kl('Protokoll neu prüfen','Refresh change log'),async()=>{try{await this.plugin.kbRefreshViews();}catch(e){report(e);}},'kf-text-button');
       for(const item of this.plugin.kbJournalInvalid||[]){const row=c.createDiv({cls:'kf-journal-warning'});row.createEl('p',{text:item.path+' · '+item.error});row.createEl('p',{text:kl('Datei unverändert erhalten. Manuell prüfen und aus einer vertrauenswürdigen Sicherung wiederherstellen.','File kept unchanged. Inspect it manually and restore it from a trusted backup.')});}
       const all=this.plugin.kbTransactions||[],limit=this.kbJournalLimit||30,entries=[...all.filter(e=>!e.done),...all.filter(e=>e.done).slice(0,limit)];
@@ -1217,6 +1220,7 @@ function installKnowledge(PluginClass,ViewClass){
       else if(record.meta.state==='review')button(actions,kl('Vorschlag prüfen','Review proposal'),()=>new KnowledgeReview(this.plugin,record).open(),'kf-primary');
       else if(record.meta.state==='archived'&&record.meta.reviewedAt&&!record.meta.publishedTarget)button(actions,kl('Wiederherstellen','Restore'),async()=>{try{await this.plugin.kbReactivate(record);}catch(e){report(e);}},'kf-text-button');
       else if(record.meta.state==='published'){
+        kbRenderRelationships(this,card,record);button(actions,kl('Aufgaben vorschlagen','Suggest tasks'),()=>new KnowledgeTaskSuggestions(this.plugin,record).open(),'kf-text-button');
         button(actions,kl('Änderung vorschlagen','Propose change'),()=>new KnowledgeDraft(this.plugin,null,record).open(),'kf-text-button');button(actions,kl('Verlauf','History'),()=>new KnowledgeHistory(this.plugin,record).open(),'kf-text-button');button(actions,kl('Eigene Ergänzungen','Your annotations'),()=>new KnowledgeNotes(this.plugin,record).open(),'kf-text-button');button(actions,kl('Archivieren','Archive'),async()=>{try{await this.plugin.kbArchive(record);}catch(e){report(e);}},'kf-text-button');
         const details=card.createEl('details');details.createEl('summary',{text:kl('Inhalt, Quellen und Verbindungen','Content, sources and connections')});details.createEl('pre',{text:kbStripLinks(record.body)});if(record.meta.userNotes){details.createEl('h3',{text:kl('Eigene Ergänzungen','Your annotations')});details.createEl('pre',{text:record.meta.userNotes});}
         details.createEl('p',{text:kl('Einordnung: ','Provenance: ')+kbLabel(record.meta.provenance)});for(const ref of record.meta.sourceRefs||[]){const source=records.find(r=>r.meta.kind==='source'&&r.meta.id===ref.id&&r.meta.revision===ref.revision);if(source)button(details,source.meta.title+' · '+(ref.passage||ref.revision.slice(0,8)),()=>this.plugin.app.workspace.getLeaf(false).openFile(source.file),'kf-text-button');}
@@ -1371,6 +1375,7 @@ class TaskEditor extends Modal {
     const knownProjects=projects(this.plugin.settings);for(const project of knownProjects.filter(p=>!p.archived||p.id===data.knowledgeflowProject))projectSelect.createEl('option',{value:project.id,text:project.name+(project.archived?tr(' · archiviert'):'')});
     if(data.knowledgeflowProject&&!knownProjects.some(p=>p.id===data.knowledgeflowProject))projectSelect.createEl('option',{value:data.knowledgeflowProject,text:tr('Unbekanntes Projekt · ')+data.knowledgeflowProject});
     projectSelect.value=data.knowledgeflowProject||'';projectSelect.onchange=()=>data.knowledgeflowProject=projectSelect.value;
+    if(data.knowledgeApproval?.evidence){const origin=form.createEl('details',{cls:'kf-knowledge-relations'});origin.createEl('summary',{text:kl('Freigabe und Herkunft','Approval and origin')});origin.createEl('p',{text:data.knowledgeApproval.approvedAt||''});origin.createEl('blockquote',{text:data.knowledgeApproval.evidence.text,cls:'kf-answer-quote'});const inspectOrigin=button(origin,kl('Gespeicherte Belegstelle prüfen','Verify saved evidence'),()=>new KnowledgeEvidence(this.plugin,data.knowledgeApproval.evidence).open(),'kf-text-button');inspectOrigin.type='button';}
     const knowledgeField=form.createEl('details');knowledgeField.createEl('summary',{text:kl('Wissen verknüpfen','Link knowledge')});for(const page of (this.plugin.knowledge||[]).filter(r=>r.meta.state==='published')){const label=knowledgeField.createEl('label',{cls:'kf-kb-check'}),check=label.createEl('input',{type:'checkbox'});check.checked=(data.knowledgeRefs||[]).includes(page.meta.id);label.createSpan({text:page.meta.title});check.onchange=()=>{data.knowledgeRefs=(data.knowledgeRefs||[]).filter(id=>id!==page.meta.id);if(check.checked)data.knowledgeRefs.push(page.meta.id);};}
     const planning=form.createEl('details',{cls:'kf-form-planning'});planning.open=!!dateValue(data.scheduled);planning.createEl('summary',{text:tr('Tagesplanung · optional')});
     planning.createEl('p',{text:tr('Plane einen Arbeitstag und bei Bedarf einen Zeitblock. Die Fälligkeit bleibt eine eigene Deadline.')});
@@ -1546,6 +1551,7 @@ class TaskView extends ItemView {
       button(toolbar,kl('Projektwissen','Project knowledge'),()=>this.openKnowledge('published',selected.id),'kf-text-button');
       c.createEl('h2',{text:selected.name,cls:'kf-project-heading'});if(selected.description)c.createEl('p',{text:selected.description,cls:'kf-project-description'});
       if(selected.note)button(c,tr('Projektnotiz öffnen'),()=>this.app.workspace.openLinkText(selected.note,'',false),'kf-primary');
+      const knowledge=(this.plugin.knowledge||[]).filter(r=>r.meta.state==='published'&&r.meta.project===selected.id);const knowledgeBox=c.createEl('details',{cls:'kf-knowledge-relations'});knowledgeBox.createEl('summary',{text:knowledge.length+kl(' verknüpfte Wissensnotizen',' linked knowledge notes')});for(const r of knowledge)button(knowledgeBox,r.meta.title,()=>this.app.workspace.getLeaf(true).openFile(r.file),'kf-text-button');
       const summary=projectSummary(this.plugin.tasks,selected.id);this.projectProgress(c,summary);
       const actions=c.createDiv({cls:'kf-preset-actions'});button(actions,tr('Projekt löschen'),()=>new DeleteProjectModal(this.plugin,selected).open(),'kf-text-button');button(actions,tr('Termine im Kalender'),()=>{Object.assign(this,homeDestination('calendar'));this.resetFilters();this.projectFilter=selected.id;this.render();},'kf-text-button');
       c.createEl('p',{text:tr('Projektaufgaben bleiben in der Projektansicht, auf der Startseite und im Kalender. Das Board zeigt nur unabhängige Einzelaufgaben.'),cls:'kf-muted'});
@@ -1733,6 +1739,7 @@ class TaskView extends ItemView {
     button(card,t.meta.title,()=>new TaskEditor(this.plugin,t).open(),'kf-title');
     if(t.meta.knowledgeflowProject){const project=projects(this.plugin.settings).find(p=>p.id===t.meta.knowledgeflowProject);card.createDiv({text:tr('Projekt · ')+(project?.name||tr('Unbekanntes Projekt')),cls:'kf-muted kf-card-project'});}
     if((t.meta.tags||[]).length){const tags=card.createDiv({cls:'kf-tags'});for(const tag of t.meta.tags)tags.createSpan({text:'#'+tag});}
+    if((t.meta.knowledgeRefs||[]).length){const links=card.createEl('details',{cls:'kf-knowledge-relations'});links.createEl('summary',{text:kl('Verknüpftes Wissen','Linked knowledge')});for(const id of t.meta.knowledgeRefs){const page=(this.plugin.knowledge||[]).find(r=>r.meta.id===id&&r.meta.state==='published');if(page)button(links,'↗ '+page.meta.title,()=>this.app.workspace.getLeaf(true).openFile(page.file),'kf-text-button');else links.createEl('p',{text:kl('Verknüpfte Notiz nicht verfügbar','Linked note unavailable')});}}
     const due=duePresentation(t);card.createDiv({text:due.label,cls:'kf-due kf-due-'+due.kind});
     const repeatLabel=recurrenceLabel(t.meta);if(repeatLabel)card.createDiv({text:repeatLabel,cls:'kf-recurrence-label'});
     this.cardNote(card,t);
@@ -2086,7 +2093,7 @@ class KnowledgeFlow extends Plugin {
     if(this.stopped||this.seriesEditing)return;
     await this.kbJournalScan();await this.kbScan();
     const version=++this.scanVersion;const tasks=[];let invalid=0;
-    const files=this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(this.settings.folder+'/'));
+    const pendingPaths=new Set((this.kbTransactions||[]).filter(e=>!e.done).flatMap(e=>e.paths||[]));const files=this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(this.settings.folder+'/')&&!pendingPaths.has(f.path)&&(!this.kbJournalInvalid?.length||!/^knowledge-[a-f0-9]{64}\.md$/.test(f.path.split('/').pop())));
     // Bound parallel reads so a large series does not serialize every disk access.
     for(let i=0;i<files.length;i+=16){
       const batch=await Promise.all(files.slice(i,i+16).map(async file=>{
@@ -2192,3 +2199,89 @@ Object.assign(module.exports.testing,{kbReadImportFiles});
 Object.assign(module.exports.testing,{kbAskTerms,kbAskStem,kbAskTokenCounts,kbAskSegments,kbAskChunks,kbAskSameCorpus,kbBuildAskIndex,kbRankAnswer,kbAskKnowledge,kbVerifyEvidence,KnowledgeEvidence,renderKnowledgeAnswer,renderKnowledgeQuestion});
 
 Object.assign(module.exports.testing,{kbQualityMask,kbQualityLinks,kbQualityPath,kbQualityResolve,kbQualityAnchor,kbQualityAssertion,kbQualityStatements,kbQualityFingerprints,kbQualityCatalog,kbQualityFresh,kbQualityReport,KnowledgeQualityDetail,renderKnowledgeQuality});
+
+
+// Reviewed knowledge-to-task conversion. Suggestions are ephemeral; approved tasks and
+// their create-only, source-pinned plans are persistent. Imported prose never authorizes work.
+function kbTaskTitle(value){return String(value||'').normalize('NFC').trim().replace(/\s+/g,' ').toLocaleLowerCase();}
+function kbOwnedTaskFolder(folder){if(typeof folder!=='string'||!/^KnowledgeFlow\/(?!Wissen(?:\/|$))[^\\\x00-\x1f:%?#]+$/.test(folder)||folder.split('/').some(p=>!p||p==='.'||p==='..'||p.trim()!==p||p.endsWith('.')))throw Error('Task suggestions require an owned KnowledgeFlow task folder');return folder;}
+function kbTaskFolder(plugin){return kbOwnedTaskFolder(plugin.settings.folder);}
+function kbTaskProject(plugin,id){if(!id)return null;const p=projects(plugin.settings).find(p=>p.id===id);if(!p||p.archived||plugin.deletingProject===id||deletedProjects(plugin.settings).some(p=>p.id===id))throw Error(kl('Projekt fehlt, ist archiviert oder wird gelöscht. Vorschläge neu laden.','Project missing, archived or being deleted. Reload suggestions.'));return p;}
+function kbTaskContext(plugin,plan){if(plan.action!=='task-approve')return '';if(plan.approval.folder!==plugin.settings.folder)return kl('Aufgabenordner seit der Freigabe geändert.','Task folder changed since approval.');try{return JSON.stringify(kbTaskProject(plugin,plan.approval.projectId))===JSON.stringify(plan.approval.project)?'':kl('Projekt seit der Freigabe verändert.','Project changed since approval.');}catch(e){return e.message;}}
+function kbLinkedTasks(tasks,id){return tasks.filter(t=>!t.meta.trashed&&!t.meta.recurrenceSkipped&&!t.meta.recurrenceSuperseded&&(t.meta.knowledgeRefs||[]).includes(id));}
+async function kbTaskSuggestions(plugin,selected=null){
+  await plugin.kbJournalScan();await plugin.kbFresh();const tasks=await plugin.readTaskFiles(),pages=(plugin.knowledge||[]).filter(r=>r.meta.kind!=='source'&&r.meta.state==='published'&&kbSafeWritePath(r.file.path)&&r.file.path.startsWith(KB_ROOT+'/Seiten/')&&(!selected||r.file.path===selected.file.path));
+  if(selected&&!pages.some(r=>r.raw===selected.raw))throw Error(kl('Notiz geändert. Erneut öffnen.','Note changed. Open it again.'));
+  const result={items:[],pages:pages.length,omittedPages:Math.max(0,pages.length-100),limited:false},seen=new Set();
+  for(const record of pages.slice(0,100)){
+    if(plugin.knowledge.filter(r=>r.meta.kind!=='source'&&r.meta.state==='published'&&r.meta.id===record.meta.id).length!==1)throw Error(kl('Wissens-ID ist mehrdeutig. Zuerst in Pflege prüfen.','Knowledge ID is ambiguous. Review Health first.'));
+    const rawHash=await kbHash(record.raw),mask=kbQualityMask(record.body,{inline:false});
+    for(const match of mask.matchAll(/^ {0,3}[-*+] \[ \] ([^\r\n]+)\r?$/gm)){
+      const text=record.body.slice(match.index,match.index+match[0].length).replace(/\r$/,''),title=text.replace(/^ {0,3}[-*+] \[ \] /,'').trim();if(!title||title.length>500)continue;
+      const key=await kbHash(JSON.stringify([record.file.path,record.meta.id,kbTaskTitle(title)]));if(seen.has(key))continue;seen.add(key);
+      const existing=tasks.find(t=>t.meta.knowledgeApproval?.key===key);if(existing)continue;
+      const pins=[];for(const ref of record.meta.sourceRefs||[]){const matches=plugin.knowledge.filter(s=>s.meta.kind==='source'&&s.meta.id===ref.id&&s.meta.revision===ref.revision);if(matches.length!==1)throw Error(kl('Quellenfassung fehlt oder ist mehrdeutig.','Source revision missing or ambiguous.'));pins.push({path:matches[0].file.path,hash:await kbHash(matches[0].raw)});}
+      result.items.push({key,title,knowledgeId:record.meta.id,evidence:{path:record.file.path,title:record.meta.title,rawHash,start:match.index,end:match.index+text.length,text,section:'body'},pins,projectId:record.meta.project||'',projects:projects(plugin.settings).filter(p=>!p.archived)});
+      if(result.items.length>=200){result.limited=true;return result;}
+    }
+  }return result;
+}
+async function kbApproveTask(plugin,proposal,input){
+  // Clone before the first await: a modal changing cannot mutate an approved write plan.
+  proposal=structuredClone(proposal);input=structuredClone(input);
+  let outcome;try{outcome=await kbWriteSerial(plugin,async()=>{
+    const state=await plugin.kbJournalScan();if(state.invalid.length||state.pending.length)throw Error(kl('Zuerst offene Änderungen im Änderungsprotokoll prüfen.','Review pending changes in the change log first.'));
+    if(!proposal||!/^([0-9a-f]{64})$/.test(proposal.key||''))throw Error('Invalid task proposal');
+    const existing=(await plugin.readTaskFiles()).find(t=>t.meta.knowledgeApproval?.key===proposal.key);if(existing)return {task:existing,duplicate:true};
+    await plugin.kbFresh();const record=await kbVerifyEvidence(plugin,proposal.evidence),indexed=plugin.knowledge.filter(r=>r.file.path===record.file.path&&r.raw===record.raw);
+    if(indexed.length!==1||record.meta.state!=='published'||record.meta.kind==='source'||record.meta.id!==proposal.knowledgeId)throw Error('Knowledge note is not available for approval');
+    const candidates=(await kbTaskSuggestions(plugin,record)).items,current=candidates.find(s=>s.key===proposal.key&&JSON.stringify(s.evidence)===JSON.stringify(proposal.evidence));if(!current||JSON.stringify(current.pins)!==JSON.stringify(proposal.pins))throw Error('Task proposal or source dependencies changed');
+    const projectId=typeof input.projectId==='string'?input.projectId:'',project=kbTaskProject(plugin,projectId);if(project&&JSON.stringify(project)!==JSON.stringify(proposal.projects.find(p=>p.id===projectId)))throw Error(kl('Projekt geändert. Vorschläge neu laden.','Project changed. Reload suggestions.'));
+    const title=String(input.title||'').trim();if(!title||title.length>500||!Object.hasOwn(PRIORITIES,input.priority)||input.due&&!validDay(input.due)||typeof input.notes!=='string'||input.notes.length>100000)throw Error(kl('Titel, Priorität, Termin oder Notizen prüfen.','Check title, priority, due date and notes.'));
+    if((await plugin.readTaskFiles()).some(t=>!t.meta.trashed&&t.meta.status!=='done'&&kbTaskTitle(t.meta.title)===kbTaskTitle(title)&&(t.meta.knowledgeflowProject||'')===projectId))throw Error(kl('Eine gleichnamige offene Aufgabe ist bereits vorhanden. Zuerst prüfen oder Titel präzisieren.','An open task with this title already exists. Inspect it or clarify the title.'));
+    const folder=kbTaskFolder(plugin),taskId='knowledge-'+proposal.key,path=folder+'/'+taskId+'.md',id=crypto.randomUUID(),created=new Date().toISOString(),evidence=proposal.evidence;
+    const meta={knowledgeflow:1,id:taskId,title,status:'open',priority:input.priority,tags:[],due:input.due||'',created,knowledgeflowProject:projectId,knowledgeRefs:[record.meta.id],knowledgeApproval:{version:1,key:proposal.key,approvedAt:created,evidence,sourcePins:proposal.pins}};validateTaskFields(meta);validatePlanning(meta);plugin.stamp(meta,null);
+    const body='## '+kl('Notizen','Notes')+'\n'+input.notes+'\n\n## '+kl('Herkunft','Origin')+'\n[['+record.file.path.replace(/\.md$/,'')+']]\n\n'+'> '+evidence.text+'\n',after=encode(meta,body);
+    if(await kbReadCurrent(plugin,path)!==null)throw Error('Task path already exists; it will not be overwritten');
+    const writes=[{path,before:null,after,role:'task'},{path:KB_ROOT+'/Protokoll/'+id+'.md',before:null,after:'# KnowledgeFlow · task-approve\n\n'+created+'\n\n[['+path.replace(/\.md$/,'')+']]\n',role:'audit'}];for(const w of writes){w.beforeHash=null;w.afterHash=await kbHash(w.after);}
+    const plan={knowledgeflowTransaction:1,id,root:KB_ROOT,vault:await kbVaultIdentity(plugin),action:'task-approve',created,approval:{projectId,project,folder,key:proposal.key,evidence},reads:[{path:record.file.path,hash:evidence.rawHash},...proposal.pins],writes};
+    const journalPath=KB_JOURNAL+'/'+id+'.md';await kbValidatePlan(plugin,plan,journalPath);await plugin.kbFolder(KB_JOURNAL);
+    try{await plugin.app.vault.create(journalPath,await kbSeal(plan));await kbApplyTransaction(plugin,await kbInspectTransaction(plugin,id));}catch(e){try{if(await kbReceipt(plugin,await kbReadJournal(plugin,journalPath)))return {task:{file:{path},meta,body,raw:after},duplicate:false};}catch(_){}throw Error(kl('Freigabe unterbrochen. Im Änderungsprotokoll prüfen und fortsetzen. ','Approval interrupted. Review and continue in the change log. ')+e.message);}
+    return {task:{file:plugin.app.vault.getAbstractFileByPath(path),meta,body,raw:after},duplicate:false};
+  });}finally{await plugin.scan();}return outcome;
+}
+class KnowledgeTaskApproval extends Modal{
+  constructor(plugin,proposal,onApproved){super(plugin.app);Object.assign(this,{plugin,proposal,onApproved});}
+  onOpen(){const c=this.contentEl;c.addClass('kf-editor-modal');this.modalEl.addClass('kf-knowledge-modal');applyPreferences(c,this.plugin);c.createEl('h2',{text:kl('Aufgabenvorschlag freigeben','Approve task suggestion')});c.createEl('p',{text:kl('Erst die Freigabe erstellt eine offene Aufgabe. Termin und Priorität legst du selbst fest.','Only approval creates an open task. You choose the due date and priority.')});
+    c.createEl('h3',{text:this.proposal.evidence.title});c.createEl('blockquote',{text:this.proposal.evidence.text,cls:'kf-answer-quote'});button(c,kl('Belegstelle prüfen','Inspect passage'),()=>new KnowledgeEvidence(this.plugin,this.proposal.evidence).open(),'kf-text-button');
+    const form=c.createEl('form'),field=(label,type='text')=>{const l=form.createEl('label',{cls:'kf-form-field'});l.createSpan({text:label});return l.createEl(type==='textarea'?'textarea':'input',type==='textarea'?{}:{type});},title=field(kl('Aufgabentitel','Task title'));title.value=this.proposal.title;title.required=true;title.maxLength=500;
+    const projectField=form.createEl('label',{cls:'kf-form-field'});projectField.createSpan({text:kl('Projekt für Aufgabe','Task project')});const project=projectField.createEl('select',{attr:{'aria-label':kl('Projekt für Aufgabe','Task project')}});project.createEl('option',{value:'',text:kl('Ohne Projekt','No project')});for(const p of this.proposal.projects)project.createEl('option',{value:p.id,text:p.name});project.value=this.proposal.projectId;
+    const priorityField=form.createEl('label',{cls:'kf-form-field'});priorityField.createSpan({text:kl('Priorität für Aufgabe','Task priority')});const priority=priorityField.createEl('select',{attr:{'aria-label':kl('Priorität für Aufgabe','Task priority')}});for(const [key,label]of Object.entries(PRIORITIES))priority.createEl('option',{value:key,text:label});priority.value='normal';const due=field(kl('Fällig am','Due date'),'date'),notes=field(kl('Aufgabennotiz','Task note'),'textarea');notes.rows=4;
+    const error=form.createDiv({attr:{role:'alert'}}),submit=form.createEl('button',{type:'submit',text:kl('Freigeben und Aufgabe erstellen','Approve and create task'),cls:'kf-primary'});form.onsubmit=async e=>{e.preventDefault();submit.disabled=true;try{const result=await kbApproveTask(this.plugin,this.proposal,{title:title.value,projectId:project.value,priority:priority.value,due:due.value,notes:notes.value});await this.onApproved?.(result);this.close();}catch(e){error.setText(e.message);submit.disabled=false;}};
+    button(c,kl('Abbrechen','Cancel'),()=>this.close(),'kf-text-button');
+  }
+}
+class KnowledgeTaskSuggestions extends Modal{
+  constructor(plugin,record=null){super(plugin.app);Object.assign(this,{plugin,record,hidden:new Set(),alive:true,generation:0});}
+  async onOpen(){this.contentEl.addClass('kf-editor-modal');this.modalEl.addClass('kf-knowledge-modal');applyPreferences(this.contentEl,this.plugin);await this.refresh();}
+  async refresh(){const job=++this.generation,c=this.contentEl;c.empty();c.createEl('h2',{text:kl('Aufgabenvorschläge','Task suggestions')});c.createEl('p',{text:kl('Nur offene Checklistenpunkte aus veröffentlichtem Wissen. Kein automatischer KI-Aufruf. Ausblenden gilt für dieses Fenster; Vorschläge werden nicht als Aufgaben gespeichert.','Only unchecked checklist items from published knowledge. No automatic AI call. Hiding applies to this window; suggestions are not saved as tasks.')});const error=c.createDiv({attr:{role:'alert'}});try{const result=await kbTaskSuggestions(this.plugin,this.record);if(!this.alive||job!==this.generation)return;const items=result.items.filter(p=>!this.hidden.has(p.key));c.createEl('p',{text:items.length+kl(' Vorschläge zur Einzelprüfung',' suggestions for individual review'),attr:{role:'status'}});if(result.limited||result.omittedPages)c.createEl('p',{text:kl('Begrenzt auf 100 Wissensnotizen und 200 Vorschläge. Einzelne Notiz gezielt öffnen.','Limited to 100 knowledge notes and 200 suggestions. Open an individual note for focused review.')});if(!items.length)c.createEl('p',{text:kl('Keine neuen offenen Checklistenpunkte. Bereits freigegebene Punkte bleiben ausgeblendet, auch im Archiv oder Papierkorb.','No new unchecked checklist items. Approved items stay hidden, including archived or trashed tasks.')});
+    for(const proposal of items){const card=c.createEl('article',{cls:'kf-kb-card'});card.createEl('h3',{text:proposal.title});card.createEl('p',{text:proposal.evidence.title,cls:'kf-muted'});const actions=card.createDiv({cls:'kf-kb-actions'});button(actions,kl('Prüfen und freigeben','Review and approve'),()=>new KnowledgeTaskApproval(this.plugin,proposal,async()=>{await this.refresh();}).open(),'kf-primary');button(actions,kl('Für dieses Fenster ausblenden','Hide for this window'),()=>{this.hidden.add(proposal.key);this.refresh();},'kf-text-button');}
+    }catch(e){if(this.alive&&job===this.generation)error.setText(e.message);}}
+  onClose(){this.alive=false;}
+}
+function kbRenderRelationships(view,parent,record){
+  const box=parent.createDiv({cls:'kf-knowledge-relations'}),project=projects(view.plugin.settings).find(p=>p.id===record.meta.project);if(record.meta.project){if(project)button(box,kl('Projekt · ','Project · ')+project.name,()=>{view.mode='projects';view.showArchive=false;view.projectId=project.id;view.render();},'kf-text-button');else box.createEl('p',{text:kl('Zugeordnetes Projekt nicht mehr verfügbar.','Assigned project is no longer available.'),cls:'kf-muted'});}
+  const tasks=kbLinkedTasks(view.plugin.tasks||[],record.meta.id);box.createEl('p',{text:tasks.length+kl(' verknüpfte Aufgaben',' linked tasks'),cls:'kf-muted'});for(const task of tasks.slice(0,20))button(box,(task.meta.status==='done'?'✓ ':'↗ ')+task.meta.title,()=>new TaskEditor(view.plugin,task).open(),'kf-text-button');if(tasks.length>20)box.createEl('p',{text:kl('Weitere Aufgaben über Projekt oder Suche öffnen.','Open further tasks through the project or search.')});
+}
+Object.assign(KnowledgeFlow.prototype,{kbSuggestTasks(record){return kbTaskSuggestions(this,record);},kbApproveTask(proposal,input){return kbApproveTask(this,proposal,input);}});
+Object.assign(module.exports.testing,{kbTaskTitle,kbTaskFolder,kbTaskProject,kbTaskContext,kbLinkedTasks,kbTaskSuggestions,kbApproveTask,KnowledgeTaskApproval,KnowledgeTaskSuggestions,kbRenderRelationships});
+async function kbValidateTaskApprovalPlan(plugin,plan){
+  const a=plan.approval;if(!a||a.folder!==kbOwnedTaskFolder(a.folder)||typeof a.projectId!=='string'||!/^([0-9a-f]{64})$/.test(a.key||'')||!Array.isArray(plan.writes)||plan.writes.length!==2||!Array.isArray(plan.reads))throw Error('Invalid task approval plan');
+  const taskWrites=plan.writes.filter(w=>w.role==='task'),audits=plan.writes.filter(w=>w.role==='audit');if(taskWrites.length!==1||audits.length!==1||taskWrites[0].before!==null||audits[0].before!==null||audits[0].path!==KB_ROOT+'/Protokoll/'+plan.id+'.md')throw Error('Task approval must only create one task and audit entry');
+  const w=taskWrites[0],{meta}=decode(w.after),origin=meta.knowledgeApproval,e=a.evidence;if(w.path!==a.folder+'/knowledge-'+a.key+'.md'||meta.id!=='knowledge-'+a.key||meta.status!=='open'||meta.knowledgeflowProject!==a.projectId||meta.recurrence||meta.trashed||meta.archived||!origin||origin.version!==1||origin.key!==a.key||JSON.stringify(origin.evidence)!==JSON.stringify(e)||!Array.isArray(origin.sourcePins)||!Array.isArray(meta.knowledgeRefs)||meta.knowledgeRefs.length!==1)throw Error('Invalid approved task snapshot');validateTaskFields(meta);validatePlanning(meta);
+  if(!e||!kbSafeWritePath(e.path)||!e.path.startsWith(KB_ROOT+'/Seiten/')||!/^([0-9a-f]{64})$/.test(e.rawHash||'')||typeof e.text!=='string'||!/^ {0,3}[-*+] \[ \] \S/.test(e.text)||!Number.isInteger(e.start)||e.start<0||e.end!==e.start+e.text.length||e.section!=='body')throw Error('Invalid task evidence');
+  const title=e.text.replace(/^ {0,3}[-*+] \[ \] /,'');if(a.key!==await kbHash(JSON.stringify([e.path,meta.knowledgeRefs[0],kbTaskTitle(title)])))throw Error('Task approval key does not match evidence');
+  const expected=[{path:e.path,hash:e.rawHash},...origin.sourcePins];if(JSON.stringify(expected)!==JSON.stringify(plan.reads)||origin.sourcePins.some(p=>!kbSafeWritePath(p.path)||!p.path.startsWith(KB_ROOT+'/Quellen/')))throw Error('Task approval dependencies do not match');
+  if(a.projectId?(!a.project||a.project.id!==a.projectId||a.project.archived):a.project!==null)throw Error('Invalid task project snapshot');
+}
+Object.assign(module.exports.testing,{kbValidateTaskApprovalPlan});

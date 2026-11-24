@@ -30,3 +30,9 @@ The index is rebuilt in memory from owned records. No database, embeddings, glob
 ## Imported sources (1.5)
 
 Source `importInfo` version 1 records `format`, selected `origin`, `sourceDate`, `dateBasis`, `importedAt`, the selected input text's `originalFileHash`, optional `conversationId` and readable `messageCount`. `created` remains the import time; a source's date is not invented from it. `revision` hashes the actual immutable source body. Text bodies retain decoded UTF-8 verbatim; chat bodies use canonical per-conversation JSON. See [SOURCE-IMPORT.md](SOURCE-IMPORT.md) for identity and deduplication rules. Import previews are private, bounded and memory-only; only confirmed selections reach disk through a single knowledge transaction.
+
+## Reviewed knowledge tasks (1.8)
+
+Tasks keep `knowledgeRefs` (published knowledge IDs) and `knowledgeflowProject` (stable project ID). Approved checklist conversions also retain `knowledgeApproval: { version: 1, key, approvedAt, evidence, sourcePins }`. Evidence stores the original owned note path/title, full raw SHA-256, body offsets and exact checklist text. Source pins store original snapshot paths and hashes. The body includes the origin link and quoted passage; the quote is not a new subtask. The task filename/ID is `knowledge-<64-hex-key>.md` within a validated owned task folder. Key = SHA-256 of note path, knowledge ID and whitespace/case-normalized checklist title. This is provenance/idempotence, not semantic identity or cryptographic user authentication.
+
+A `task-approve` journal plan contains exactly one create-only `task` write and one audit, `approval` with folder/key/evidence/project ID and snapshot, and read pins for the published note and its original sources. Other journal actions cannot acquire task writes. Completed plans remain readable after task-folder changes; pending recovery blocks changed context. General task edits are unchanged.
