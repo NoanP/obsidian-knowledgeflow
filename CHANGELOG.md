@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-24
+
+### Added
+- Read-only Wissenssuche / Ask knowledge tab and command, using local lexical passage ranking across owned published notes and valid source snapshots. Scope to notes, sources or both.
+- Up to six verbatim answer passages, exact full-record hashes and section offsets, inspectable citations and note/source links opening in a new tab after freshness checks.
+- Separate recorded source references, original revision identity, personal-annotation labels, inference/ambiguity warnings, missing/ambiguous source references and newer/multiple source-version notices.
+- Explicit no-result/partial-match handling, title-only discovery links separated from answer passages, bounded indexing, copied-passage deduplication, active-branch chat text retrieval and content-sensitive in-memory index reuse.
+
+### Boundaries and validation
+- 206 automated tests pass, including exact quotes/offsets, stale links, read-only operation, untrusted input, missing evidence, contradictory passages, source versions, chat branches, cache invalidation and explicit search limits.
+- A fixed synthetic retrieval set returns the expected topic in the first three passages for 10 questions and abstains on two absent topics. This is not a real-vault quality benchmark.
+- Answers are extracted text, not free-form AI synthesis. Source links establish provenance, not automatic claim support. No provider calls, query-history storage, publishing or automatic contradiction/truth verification.
+- Isolated browser verification confirms excerpt rendering, separate title discovery, source links, exact passage inspection, note/source opening and explicit no-evidence results.
+- Repository-only release: TaskFlow and Obsidian remain unchanged. Native Obsidian/mobile behavior and real-vault retrieval quality need a separately authorized pilot.
+
+
 ## [1.5.0] - 2026-11-24
 
 ### Added

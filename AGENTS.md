@@ -31,3 +31,9 @@ remain separate validation tasks. Update docs and CHANGELOG honestly.
 
 Version manifest/package/versions together. Workflow publishes immutable numbered
 BRAT releases after checks on main. Do not overwrite an existing release.
+
+Knowledge search is read-only, local and extractive. Every answer passage must verify
+against its pinned full-record hash and exact section offsets. Recorded source links
+are not automatic claim-level support. Never fabricate a synthesis, certainty score,
+semantic contradiction detection or citation. Search only owned published pages and
+valid source snapshots; disclose index limits and preserve active chat-branch scope.

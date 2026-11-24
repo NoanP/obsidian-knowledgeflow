@@ -8,12 +8,12 @@
 | 1.3 | Approved cosmic homepage with small navigation tiles |
 | 1.4 | Persistent knowledge change journal, conflict checks and reviewed recovery |
 | 1.5 | Selected note/chat import with provenance, dates, exact deduplication and journal recovery |
+| 1.6 | Read-only local extractive answers with pinned passages and direct note/source references |
 
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |
 | --- | --- | --- |
-| Source-backed search | Read-only questions with traceable supporting notes and sources | Representative question set and measured retrieval failures |
 | Knowledge quality | Broken links, similar content and conflicting claims | Explicit evidence; avoid invented certainty |
 | Knowledge and projects | Proposed decisions/actions connected to existing projects | Explicit review through the board task workflow |
 | Controlled automation | Optional providers, cost limits and a pausible queue | Separate provider/privacy/cost approval and recovery coverage |

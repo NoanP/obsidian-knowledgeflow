@@ -1,10 +1,16 @@
-# KnowledgeFlow 1.5
+# KnowledgeFlow 1.6
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.5: selected source import
+## New in 1.6: local answers with evidence
+
+Open **Wissen & Quellen → Wissenssuche / Knowledge & sources → Ask knowledge**. Ask a question or enter concrete terms; scope the search to published notes, sources or both. Responses assemble verbatim passages with direct note links, exact-version inspection and separate recorded source links. Missing material, inference/ambiguity markers and known source-version issues are disclosed. Title-only matches remain separate discovery links. Queries and answers are not saved or sent to a provider.
+
+This is local extractive retrieval, not a free-form AI chatbot or automatic fact checker. It does not infer whether two passages contradict each other or whether recorded source links actually prove each note claim. Read [search, citations, validation and limits](docs/KNOWLEDGE-SEARCH.md).
+
+## Selected source import (1.5)
 
 Open **Wissen & Quellen → Quellen importieren / Knowledge & sources → Import sources**. Select Markdown notes by filename or choose local `.md`, `.txt` and supported chat `.json` files. Review conversations individually, exact duplicate/new-version indicators, provenance and dates, then explicitly import up to 20 selected sources. Originals are never edited. Import writes use the 1.4 journal and recovery flow.
 
@@ -61,7 +67,7 @@ Open [`preview/index.html`](preview/index.html) in a desktop browser, or run `np
 
 ## Optional installation later
 
-**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.5.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
+**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.6.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
 
 Native Obsidian and mobile validation are not completed for 1.0. The inherited task layer has automated coverage; the new knowledge workflow is tested through an in-memory vault and browser simulation. Cross-device conflicts and process/power failures are not atomic transactions. Use normal backups before any later real-vault pilot.
 
