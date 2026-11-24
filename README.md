@@ -1,14 +1,24 @@
-# KnowledgeFlow 1.8
+# KnowledgeFlow 1.9
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.8: connect knowledge to work
+## New in 1.9: controlled AI automation
+
+Open **Wissen & Quellen → KI-Automatisierung**, or **Settings → KI & Budget**. The optional OpenAI connection is disabled by default. Set current input/output prices and per-job/daily/monthly USD limits, then provide an API key for this session only. Nothing connects automatically, and the manual assistant workflow remains available.
+
+Select one to six existing source snapshots and a job type: summary, next steps or open questions. A local job draft does not send anything. **Versand prüfen** shows the complete outgoing request, recipient, pinned source versions and estimated reservation. Explicitly approve each transfer, then start the approved queue. Pause stops subsequent jobs; a request already sent may still complete and incur costs. Restarts pause the queue; uncertain requests are never automatically retried.
+
+Results remain untrusted text until **Als Wissensentwurf zur Prüfung speichern** is explicitly chosen. This creates a source-pinned, journaled review draft, never a published note or real task. Publication and checklist-to-task approval remain separate actions.
+
+Cost limits are local accounting gates based on manually entered prices, conservative text-input estimates and an output-token cap, not provider billing guarantees or an account-wide spending control. Unknown outcomes retain their full reservation. Read [setup, privacy, costs and recovery](docs/AI-AUTOMATION.md).
+
+## Connect knowledge to work (1.8)
 
 Published knowledge cards show their project and linked tasks, including completed tasks. Projects list their linked knowledge; task cards and editors retain direct knowledge links. Existing tasks can be linked through **Wissen verknüpfen / Link knowledge**, and a knowledge draft can assign its project before publishing.
 
-Choose **Aufgabenvorschläge / Task suggestions** in Knowledge & sources, or **Aufgaben vorschlagen / Suggest tasks** on an individual published note. Only unchecked Markdown checklist lines become local review candidates. Inspect the exact passage, adjust the title/project/priority/due date/note, then explicitly choose **Freigeben und Aufgabe erstellen / Approve and create task**. Closing or hiding does not create a task. Hiding lasts for the current window; there is no persistent rejection queue or AI provider.
+Choose **Aufgabenvorschläge / Task suggestions** in Knowledge & sources, or **Aufgaben vorschlagen / Suggest tasks** on an individual published note. Only unchecked Markdown checklist lines become local review candidates. Inspect the exact passage, adjust the title/project/priority/due date/note, then explicitly choose **Freigeben und Aufgabe erstellen / Approve and create task**. Closing or hiding does not create a task. Hiding lasts for the current window; there is no persistent rejection queue or automatic provider call in checklist-to-task conversion.
 
 Approved tasks store exact provenance and a stable approval identity. Their creation is journaled with pinned note/source dependencies, conflict checks and explicit recovery. Read [workflow, safeguards and limits](docs/KNOWLEDGE-WORK.md). TaskFlow and existing Obsidian installations are untouched.
 
@@ -58,7 +68,7 @@ See [graph research and design decisions](docs/GRAPH-RESEARCH.md) for the offici
 - **Knowledge workspace:** sources, published pages, review queue, health checks and archive. Full-text search across title, content, tags and annotations, with excerpts and project/area filters.
 - **Traceable sources:** paste source text or your own notes, optionally recording a URL and author. Source text is preserved exactly and identified by SHA-256. Repeated capture of the same URL/text version is detected; changed text creates a new revision.
 - **Human review:** prepare a knowledge page, meeting record, solved case or decision. Select exact source versions; compare before and after; explicitly publish or archive. Existing pages receive proposed changes rather than silent overwrites.
-- **AI-assisted workflow:** prepare a work request from selected sources and manually pass it to an assistant of your choice. Paste its JSON proposal back into KnowledgeFlow; it stays a draft until reviewed. The plugin has no built-in AI provider or network calls.
+- **AI-assisted workflow:** prepare a work request from selected sources and manually pass it to an assistant of your choice. Paste its JSON proposal back into KnowledgeFlow; it stays a draft until reviewed. This manual workflow makes no provider calls. Version 1.9 separately adds an optional, disabled-by-default OpenAI queue with explicit data-transfer approval.
 - **Knowledge in work:** project knowledge view, linked knowledge pages on tasks, related pages and native wikilinks. Personal annotations remain separate from proposed content.
 - **History and health:** earlier record versions, loading previous page text as a fresh draft, operation logs, missing references, newer source revisions and duplicate titles. Health findings are review prompts, not a truth detector.
 - **TaskFlow-derived work tools:** graph-first homepage, interactive Kanban, projects, calendar, recurring tasks, filters, statistics, notes/subtasks, archive/trash and detailed settings. Gray interface with status and priority colors; eight action tiles plus a knowledge-workspace entry. New tasks remain a board action.
@@ -99,7 +109,7 @@ Edit `main.js`, `styles.css`, tests and docs here. Bump `manifest.json`, `packag
 
 ## Boundaries
 
-1.0 provides the knowledge workflow and task tools. It does not yet provide unattended AI processing, semantic/vector search, automatically generated weekly reviews, source-page crawling, background jobs or direct chat inside Obsidian. A local search engine or an AI provider can be added after measured need and a separate design decision. Local storage does not make an external assistant local: you decide what selected text to share and with whom.
+1.0 provides the knowledge workflow and task tools. Version 1.9 adds sequential, explicitly approved provider jobs. It does not provide unattended schedules, semantic/vector search, automatically generated weekly reviews, source-page crawling, tool execution or direct chat. Other providers and local models need separate adapters and validation. Local storage does not make an external assistant local: you decide what selected text to share and with whom.
 
 ## Inspiration and license
 

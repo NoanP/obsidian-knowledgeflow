@@ -50,3 +50,15 @@ retain literal version-pinned evidence. Approval plans may create exactly one ow
 and audit file, never edit a task/source. Pin its note/source dependencies and selected
 project snapshot, use a stable provenance key and quarantine unfinished task outputs.
 Ordinary task/project/settings writes are not covered by this new transaction action.
+
+AI automation is opt-in. Never add a provider call to local search, quality checks,
+imports, task suggestions or plugin startup. Keep credentials in session memory only;
+never log request headers/provider errors or save a key. Only explicitly selected
+owned sources and a reviewed exact request may cross the fixed official endpoint.
+Durably reserve locally calculated costs before dispatch. Unknown outcomes keep their
+reservation and never retry automatically. Pause blocks subsequent jobs; do not claim
+that it cancels an already-sent request or guarantees the provider's bill. On reload
+pause and classify interrupted sends before accepting new execution. AI output is
+untrusted text; only explicit adoption may create a journaled review draft. No tool
+execution, automatic publishing or task creation. Use simulated transports for tests
+and browser preview; never incur real API charges as part of repository validation.

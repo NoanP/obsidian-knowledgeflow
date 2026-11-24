@@ -652,3 +652,6 @@
 .kf-knowledge-relations > .kf-text-button { display: block; text-align: start; max-width: 100%; white-space: normal; }
 .kf-knowledge-relations summary { cursor: pointer; }
 .kf-knowledge-relations .kf-answer-quote { color: var(--text-normal); }
+
+/* Automation content is inert text and inherits KnowledgeFlow's neutral palette. */
+.kf-ai-result { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 55vh; overflow: auto; }

@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-24
+
+### Added
+- Optional, disabled-by-default OpenAI integration using one fixed official HTTPS endpoint and pinned GPT-4.1 mini model, with no SDK, tools, web crawling or automatic provider discovery.
+- Central AI control under Knowledge & sources and Settings → AI & budget: source selection, summary/next-step/question jobs, complete request preview, per-job send approval, explicit queue start, pause and result review.
+- Session-memory credentials only; no API keys in plugin settings, source notes, persisted queue, logs or exported payloads. Forget-key pauses further work.
+- Persistent vault-bound, checksummed queue with optimistic updates, source hashes, approved request/configuration hashes, retained results, status and usage accounting. Jobs dispatch one at a time with durable reservations before network use.
+- Per-job, local-day and local-month USD limits based on manually configured prices, a conservative input allowance and bounded output. Missing/invalid usage and uncertain failures retain full reservations; excess reported usage pauses subsequent jobs.
+- Startup pause, interrupted-request classification, 60-second logical timeout, blocked native-flight overlap, explicit paid-retry preparation and no automatic retries.
+- Separate result adoption into a deterministic, source-pinned knowledge draft through the existing change journal. Repeated adoption and interrupted recovery do not duplicate drafts; publishing/tasks retain separate approvals.
+
+### Boundaries and validation
+- 286 automated tests pass. Added tests cover approval gates, budget checks both before approval and dispatch, durable reservations, pause races, restarts, lost acknowledgements, exact source versions, concurrent starts/adoption, invalid queues, credential non-persistence, late results, timeout, output isolation and journal recovery.
+- Isolated browser acceptance uses synthetic sources, an inert preview key and a simulated provider only. It verifies disabled setup, exact send preview, cancel/approval, accounted result, pause, explicit review-draft adoption and the Settings entry.
+- No live paid API request or native Obsidian installation was exercised. Account access to the pinned model, native network/mobile behavior and real invoice reconciliation remain separate validation tasks.
+- Budgets are local calculated gates, not guaranteed charges or account-wide limits. Manual prices, token estimation, tax/fees, other clients/devices and provider changes limit billing guarantees. `store:false` is not a promise of zero provider retention.
+- Queue retains at most 100 jobs and 8 million characters without automatic pruning or budget reset. It stores selected request text and results in the user's owned vault folder; it is not encrypted storage or an authenticated audit log.
+- Only KnowledgeFlow is released. TaskFlow and every existing Obsidian vault/plugin installation remain unchanged.
+
 ## [1.8.0] - 2026-11-24
 
 ### Added

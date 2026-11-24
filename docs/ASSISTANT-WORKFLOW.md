@@ -37,3 +37,12 @@ There is no unattended agent, scheduler, provider API, paid subscription depende
 - Do not change tasks, recurrence rules, schedules, status, settings or plugin installations as a side effect of knowledge processing.
 - Clearly state uncertainty and disagreements. A confident writing style is not evidence.
 - Never upload vault contents to a public source-code repository.
+
+## Optional controlled provider path (1.9)
+
+The manual copy/paste workflow above remains available and does not call a provider.
+The optional OpenAI queue is a separate, disabled-by-default path documented in
+[AI automation](AI-AUTOMATION.md). It requires a configured budget/price profile,
+explicit source selection, exact-request send approval and a session key. Provider
+results are plain untrusted text until a separate adoption action creates a review
+draft. Nothing publishes, performs tool actions or creates tasks automatically.

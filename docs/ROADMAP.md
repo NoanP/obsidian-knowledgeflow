@@ -11,11 +11,12 @@
 | 1.6 | Read-only local extractive answers with pinned passages and direct note/source references |
 | 1.7 | Read-only quality candidates for links, similar passages and narrow possible statement conflicts |
 | 1.8 | Knowledge/project/task navigation and individually approved checklist-to-task suggestions with provenance and journal recovery |
+| 1.9 | Opt-in provider queue with per-job data-transfer approval, local budgets, pause/restart controls and separately reviewed result drafts |
 
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |
 | --- | --- | --- |
-| Controlled automation | Optional providers, cost limits and a pausible queue | Separate provider/privacy/cost approval and recovery coverage |
+| Broader automation support | Additional/local providers, safe history compaction and invoice/token reconciliation | Explicit provider/privacy choices, preserved reservations and separate acceptance tests |
 
 Native Obsidian/mobile validation requires an explicitly approved disposable vault. Existing TaskFlow and Vault1 remain outside the current scope. General journaling for task/project/settings operations beyond reviewed suggestion creation, history retention and cross-device conflict tooling are separate future work; do not imply these are already covered by 1.4.
