@@ -6,7 +6,7 @@ The initial user scope permits only a new repository. Do not install this plugin
 
 `npm run check` validates JavaScript and release metadata. `npm test` runs inherited TaskFlow task/calendar/project tests and new knowledge storage/approval tests. The Obsidian module is simulated; JSON represents the YAML subset used by fixtures. This does not certify Obsidian's real YAML adapter.
 
-Knowledge tests cover: exact source preservation, URL normalization, deduplication, new source revisions, simultaneous capture, invalid input, source tampering, explicit approval, stale targets, preserving annotations/unknown metadata, retained page history, failed multi-file writes/audit writes and rollback, search/filter behavior, health findings, path ownership and separate plugin identity.
+Knowledge tests cover: exact source preservation, URL normalization, deduplication, new source revisions, simultaneous capture, invalid input, source tampering, explicit approval, stale targets, preserving annotations/unknown metadata, retained page history, failed multi-file/audit writes and reviewed recovery, search/filter behavior, health findings, path ownership and separate plugin identity.
 
 ## Browser-only UI
 
@@ -34,3 +34,9 @@ The graph is read-only. Tests verify eligibility, no synthetic same-tag edges, e
 Automated tests cover a non-planar deterministic layout, finite bounded coordinates, perspective size changes with depth, camera orbit, wide/narrow viewport fitting, frontmost-node hit testing, BFS neighborhoods (1–3 hops), connection/orphan/text filters, explicit node limits, removal of home task/stat rendering and DOM/Canvas-host interaction/lifecycle without file writes.
 
 The browser preview was visually inspected for the viewport split and eight action tiles. Native browser input automation was intermittently interrupted by window changes, so automated renderer-host tests supplement rather than replace that visual inspection. Native Obsidian lifecycle/mobile gestures and large-vault performance are still separate outstanding checks. No Obsidian files were touched.
+
+## Persistent knowledge journal (1.4)
+
+163 automated tests pass. Fault injection exercises before and after each of seven storage calls in an existing-page publish (14 interruption scenarios), restarts with a fresh plugin and Vault wrapper, confirms read-only discovery, resumes from persisted snapshots and checks duplicate-free repeat recovery. Other cases cover stale previews, divergent external edits, source changes/removal, process-time races, create collisions, malformed/truncated/moved plans, mismatched snapshot hashes, missing/corrupt/orphan receipts, unsafe and duplicate paths, direct concurrent commits and journal persistence failure.
+
+The isolated browser host exercises the change-log tab, simulated interruption, human-readable before/after preview, explicit continuation and completed status. Test data remains in memory. The preview supports JSON frontmatter, a subset of YAML; native Obsidian parsing, actual process termination, filesystem corruption, fsync/power-loss durability, mobile rendering and multi-device sync behavior are not verified. No Obsidian installation or real vault is used.

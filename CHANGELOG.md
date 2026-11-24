@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-24
+
+### Added
+- Persistent knowledge write-ahead plans with exact before/after snapshots, SHA-256 checks, source dependencies, a vault/root identity and sealed completion receipts.
+- Knowledge & sources → Change log, with readable version previews, pending/completed status, explicit preview-bound recovery and loading prior published text as a new draft.
+- Read-only restart discovery. Pending/invalid journals block knowledge writes; partial records are excluded from the knowledge index and a home notice leads to recovery.
+- Local per-Vault writer serialization, safe path/duplicate checks, create-only new files, exact expected-text checks inside Vault.process and final output/dependency verification.
+
+### Changed
+- Interrupted knowledge operations now retain files and persisted snapshots for reviewed continuation. They no longer attempt destructive rollback or remove newly created files. Matching outputs are skipped during recovery; divergent external changes are preserved and block continuation.
+- This upgrade covers knowledge operations. Task, recurrence, project-setting and trash workflows are unchanged. Historical logs and page versions remain readable.
+
+### Validation
+- 163 automated tests, including 14 injected interruption points around publish writes, reload/recovery, repeat recovery, stale previews, conflicts, source dependencies, corrupt journals, receipts, path constraints and concurrent writes.
+- Isolated in-memory browser verification of the log, snapshot review and interruption/recovery. No changes or installation in Obsidian or TaskFlow.
+- Restart recovery depends on the files actually persisted by the Vault API. This is not filesystem-level atomicity, power-loss protection, cross-device locking or a full-vault backup.
+
+
 ## [1.3.0] - 2026-11-24
 
 ### Changed

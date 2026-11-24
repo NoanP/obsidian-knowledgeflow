@@ -10,7 +10,8 @@ Knowledge records live only under `KnowledgeFlow/Wissen`:
 | Entwuerfe | Review drafts, including archived accepted/rejected drafts |
 | Seiten | Published pages, meeting notes, solved cases and decisions |
 | Verlauf | Before versions of changed records, retained locally |
-| Protokoll | One Markdown audit entry per completed knowledge operation |
+| Protokoll | Human-readable audit entries, completed only when the transaction receipt exists |
+| Aenderungen | Sealed JSON write-ahead plans and completion receipts in `.md` files; immutable snapshots, excluded from the knowledge index |
 
 `knowledgeflowKnowledge: 1` identifies records. Required fields: `id`, `title`, `kind` (`source`, `page`, `meeting`, `case`, `decision`), `state` (`inbox`, `review`, `published`, `archived`). Sources add `revision`, `url`, `author`, `created`. Other records can include `sourceRefs: [{id, revision, passage}]`, `related` page IDs, `project` ID, `area`, `tags`, `provenance` (`source`, `inferred`, `ambiguous`), `userNotes` and review timestamps.
 
@@ -22,6 +23,6 @@ Published bodies contain a generated section between `<!-- knowledgeflow:links:s
 
 Before an existing knowledge record changes, a history file preserves its old full Markdown. A published page's History dialog can load prior text as a NEW draft against the current revision; source selection and explicit approval still apply. Current personal annotations are kept. This is page revision recovery, not full-vault backup restoration. Old histories and operation logs are not silently pruned.
 
-Writes are serialized within one plugin instance, use Vault.process for existing files and optimistic checks, and attempt conditional rollback when an operation throws. Newly created files from a failed operation go to Obsidian's trash. Concurrent external modifications are never deliberately overwritten during rollback. A process crash, sync race or power failure can still leave partial changes. Audit entries record operations and paths, not proofs of atomicity. Use normal independent backups for later real-vault use.
+Knowledge writes are serialized per Vault object in the local runtime. A write-ahead plan is persisted before record, history or audit writes. Plans include exact before/after text and SHA-256 hashes, source-dependency hashes and a vault/root identity. Existing records use Vault.process with exact expected-text checks; new records use create-only writes. Completion requires matching outputs, dependencies and a sealed receipt. Pending operations retain all available files and snapshots; recovery is explicit, preview-bound and idempotent. Partial records are excluded from the knowledge index until completion. No automatic deletion or rollback is performed. See [RECOVERY.md](RECOVERY.md) for scope, recovery, retention and failure limits.
 
 The index is rebuilt in memory from owned records. No database, embeddings, global vault scan for content, or generated index.md is required. Search does not search arbitrary legacy notes. Attachments and external web fetching are outside 1.0.

@@ -1,0 +1,30 @@
+# Knowledge changes and recovery (1.4)
+
+## User workflow
+
+1. Open **Wissen & Quellen → Änderungsprotokoll**. Completed knowledge operations show their time, action and affected file count. Expand a review to compare readable content and, if needed, exact full Markdown.
+2. An interrupted operation appears first. Further knowledge writes pause; affected records are withheld from the knowledge index and graph until completion. The home scene links to recovery.
+3. Open **Fassungen prüfen**. The view identifies already-written, pending and conflicting files and checks referenced sources. After checking the saved plan, choose **Geprüfte Änderung fortsetzen**.
+4. Recovery writes only pending outputs. It verifies unchanged current files and source dependencies again. Any divergence or stale preview stops it. Close, resolve the file conflict carefully, and reopen the preview; there is no force-overwrite button.
+5. Completed published-page changes can load their prior content as a new draft against the current page. Normal source validation and explicit publishing still apply. Current personal annotations and unknown target metadata are retained. This is a content revision proposal, not a byte-for-byte rollback of every metadata field.
+
+An invalid journal pauses the entire knowledge index until resolved; its affected paths cannot safely be inferred. On startup, journals are discovered without applying them. Closing a recovery review never authorizes a write. Existing old history and human-readable audit files remain available. No automatic migration, pruning, source reprocessing or external provider is involved.
+
+## Persisted protocol
+
+- Scope: `KnowledgeFlow/Wissen/{Quellen,Entwuerfe,Seiten,Verlauf,Protokoll}`. Source snapshots remain create-only. Tasks, recurrence, project settings, plugin settings and trash operations are outside this transaction layer.
+- `Aenderungen/<uuid>.md` is a sealed JSON plan with schema marker, action/time, exact original and intended text, SHA-256 per version, source-dependency hashes and vault/root binding. It is created before any record writes.
+- The desktop binding hashes the vault base path and owned root. When no base path is available, it hashes the vault name and root; this fallback cannot distinguish two vaults with the same name. Renaming/moving a vault may intentionally block replay of its older plans. Inspect and recover before moving the vault; manually review moved/foreign plans rather than editing their binding blindly.
+- Plans accept at most 256 total writes and 16 million characters. Path scope, roles, duplicate paths and content hashes are revalidated when read. Checksums detect accidental damage; they are not signatures or a defense against someone who can rewrite vault files and recompute hashes.
+- Existing records use `Vault.process` with exact before-text checks inside the update callback. New files use create-only operations. Writer coordination is shared by cooperating calls using the same Vault object in this runtime, not other devices or external applications.
+- Recovery approval binds to the exact plan and current file/source hashes. A late edit cannot be silently accepted using an old preview. Missing existing targets and content matching neither saved version require manual resolution.
+- After every output and dependency matches, `<uuid>.done.md` records a checksummed completion receipt bound to the exact plan hash. Missing receipts are pending; malformed receipts or missing plans block knowledge writes.
+- The receipt establishes what was verified then. Later external edits do not retroactively change completed history. Complete histories do not automatically replay.
+
+## Failure limits and retention
+
+Interrupted operations retain both saved snapshots and any partial output. They do not automatically delete files or roll back external edits. A later source conflict may leave already-written output in place but unindexed until reviewed recovery succeeds. A damaged journal requires careful manual inspection and restoration from a trusted backup; do not delete the warning file simply to clear the blocker.
+
+Completed Vault calls are the persistence boundary available to this plugin. It cannot force filesystem flushes, atomically commit multiple files, prevent all sync races, replace an independent backup or reconstruct a lost/corrupt journal. Recovery has automated simulated-interruption coverage, not certification against power loss or arbitrary storage corruption. Multi-device editing remains an external coordination concern.
+
+Plans contain local copies of original and new text, including annotations. They share the vault's existing storage/sync/backup permissions and are not separately encrypted. No external transmission is added. History is never silently pruned, so storage grows with edits; retention management is a future explicit feature.

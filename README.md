@@ -1,12 +1,18 @@
-# KnowledgeFlow 1.2
+# KnowledgeFlow 1.4
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.2: immersive 3D homepage
+## New in 1.4: reliable knowledge changes
 
-The homepage now dedicates approximately 90% of its usable height to the knowledge network and 10% to the eight action tiles below. Daily task lists, day statistics, additional-task sections and favorites are no longer rendered on the homepage. Tasks remain available in Board/Calendar/Projects and statistics through their own tile. The Knowledge & sources button remains in the graph toolbar. At narrow widths the action tiles wrap into two rows to remain usable; the split is approximate rather than rigid on mobile or very short windows.
+Open **Wissen & Quellen → Änderungsprotokoll / Knowledge & sources → Change log** to inspect before/after versions, resume interrupted operations after a fresh review, or load previous published content as a new draft. Before changing a source/draft/page, KnowledgeFlow persists a local write-ahead plan with content snapshots and SHA-256 checks. Pending or invalid operations block further knowledge writes; partial records stay out of the knowledge index. Recovery preserves divergent external edits and requires manual conflict resolution. Source dependencies are checked as well as output files.
+
+This covers knowledge capture, drafts, publishing, annotations, archive and restore. Tasks, recurrence, project settings and permanent trash operations retain their previous behavior. The journal supports resuming persisted operations after a restart; it is not a full-vault backup, cross-device lock or a guarantee against power loss. See [recovery and limitations](docs/RECOVERY.md).
+
+## Cosmic 3D homepage
+
+The left side has a daily welcome, local thought and eight small translucent action tiles. The right side contains the interactive knowledge network, decorative stars and a warm light core. Decorations are never records or links. Daily tasks and statistics remain in their dedicated workspaces. Expand **Netz erkunden / Explore network** for search, note selection and filters. Narrow panes stack the sidebar above the graph.
 
 The network uses real x/y/z node coordinates, force-directed placement, a rotatable perspective camera and depth-ordered sphere/ring drawing. It is a software-rendered 3D scene on Canvas 2D, not a CSS-rotated flat graph and not a WebGL/Three.js dependency. There are no large-vault frame-rate guarantees.
 
@@ -49,7 +55,7 @@ Open [`preview/index.html`](preview/index.html) in a desktop browser, or run `np
 
 ## Optional installation later
 
-**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.2.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
+**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.4.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
 
 Native Obsidian and mobile validation are not completed for 1.0. The inherited task layer has automated coverage; the new knowledge workflow is tested through an in-memory vault and browser simulation. Cross-device conflicts and process/power failures are not atomic transactions. Use normal backups before any later real-vault pilot.
 

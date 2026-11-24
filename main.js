@@ -682,26 +682,119 @@ class KnowledgeNotes extends Modal{
   constructor(plugin,record){super(plugin.app);Object.assign(this,{plugin,record});}
   onOpen(){const c=this.contentEl;c.addClass('kf-editor-modal');applyPreferences(c,this.plugin);c.createEl('h2',{text:kl('Eigene Ergänzungen','Your annotations')});const input=c.createEl('textarea',{attr:{'aria-label':kl('Eigene Ergänzungen','Your annotations')}});input.rows=12;input.value=this.record.meta.userNotes||'';const error=c.createDiv({attr:{role:'alert'}});const save=button(c,kl('Speichern','Save'),async()=>{save.disabled=true;try{await this.plugin.kbAnnotate(this.record,input.value);this.close();}catch(e){error.setText(e.message);save.disabled=false;}},'kf-primary');}
 }
+// Persistent write-ahead plans. Vault API completion is not an fsync/atomicity guarantee.
+const KB_JOURNAL=KB_ROOT+'/Aenderungen',kbWriters=new WeakMap();
+function kbSafeWritePath(path){
+  if(typeof path!=='string'||!path.startsWith(KB_ROOT+'/')||/[\\\x00-\x1f:%?#]/.test(path)||!path.endsWith('.md'))return false;
+  const parts=path.split('/');return parts.every(p=>p&&p!=='.'&&p!=='..'&&p.trim()===p&&!p.endsWith('.'))&&['Quellen','Entwuerfe','Seiten','Verlauf','Protokoll'].includes(parts[2])&&parts.length===4;
+}
+function kbActionLabel(action){return ({capture:kl('Quelle erfassen','Capture source'),draft:kl('Entwurf speichern','Save draft'),publish:kl('Wissen übernehmen','Publish knowledge'),annotate:kl('Ergänzungen speichern','Save annotations'),archive:kl('Archivieren','Archive'),restore:kl('Wiederherstellen','Restore')})[action]||action;}
+async function kbSeal(payload){return JSON.stringify({format:'knowledgeflow-journal-v1',payload,sha256:await kbHash(JSON.stringify(payload))},null,2)+'\n';}
+async function kbUnseal(raw){
+  if(typeof raw!=='string'||raw.length>16000000)throw new Error('Invalid journal size');const envelope=JSON.parse(raw);
+  if(envelope.format!=='knowledgeflow-journal-v1'||!envelope.payload||envelope.sha256!==await kbHash(JSON.stringify(envelope.payload)))throw new Error('Journal integrity check failed');return envelope.payload;
+}
+function kbWriteSerial(plugin,fn){const vault=plugin.app.vault,run=(kbWriters.get(vault)||Promise.resolve()).catch(()=>{}).then(fn);kbWriters.set(vault,run);return run;}
+async function kbVaultIdentity(plugin){const vault=plugin.app.vault,base=vault.adapter?.getBasePath?.();return kbHash(JSON.stringify([KB_ROOT,base||vault.getName?.()||'unnamed-vault',base?'path':'name']));}
+async function kbReadCurrent(plugin,path){const file=plugin.app.vault.getAbstractFileByPath(path);return file?await plugin.app.vault.read(file):null;}
+async function kbValidatePlan(plugin,plan,path){
+  if(plan?.knowledgeflowTransaction!==1||!/^[-a-z0-9]{36}$/.test(plan.id)||path!==KB_JOURNAL+'/'+plan.id+'.md'||plan.root!==KB_ROOT||plan.vault!==await kbVaultIdentity(plugin)||!Array.isArray(plan.writes)||!plan.writes.length||plan.writes.length>256||typeof plan.action!=='string'||typeof plan.created!=='string')throw new Error('Invalid journal or different vault identity');
+  if(!Array.isArray(plan.reads)||plan.reads.length>512)throw new Error('Invalid source checks');for(const read of plan.reads)if(!kbSafeWritePath(read.path)||!read.path.startsWith(KB_ROOT+'/Quellen/')||!/^([0-9a-f]{64})$/.test(read.hash))throw new Error('Invalid source dependency');
+  const seen=new Set();for(const w of plan.writes){
+    const key=typeof w.path==='string'?w.path.normalize('NFC').toLowerCase():'';if(!kbSafeWritePath(w.path)||seen.has(key)||!(w.before===null||typeof w.before==='string')||typeof w.after!=='string'||!['record','history','audit'].includes(w.role))throw new Error('Unsafe journal write plan');seen.add(key);if((w.role==='history')!==w.path.startsWith(KB_ROOT+'/Verlauf/')||(w.role==='audit')!==w.path.startsWith(KB_ROOT+'/Protokoll/'))throw new Error('Invalid journal write role');
+    if(w.beforeHash!==(w.before===null?null:await kbHash(w.before))||w.afterHash!==await kbHash(w.after))throw new Error('Snapshot integrity check failed');
+    if(w.path.startsWith(KB_ROOT+'/Quellen/')&&w.before!==null)throw new Error('Sources are immutable');
+  }return plan;
+}
+async function kbReadJournal(plugin,path){const raw=await kbReadCurrent(plugin,path);if(raw===null)throw new Error('Journal missing');const plan=await kbValidatePlan(plugin,await kbUnseal(raw),path),hash=await kbHash(raw);return {plan,hash,raw};}
+async function kbInspectTransaction(plugin,id){
+  if(!/^[-a-z0-9]{36}$/.test(id))throw new Error('Invalid transaction ID');const entry=await kbReadJournal(plugin,KB_JOURNAL+'/'+id+'.md'),items=[];
+  for(const write of entry.plan.writes){const current=await kbReadCurrent(plugin,write.path);items.push({...write,currentHash:current===null?null:await kbHash(current),state:current===write.after?'after':current===write.before?'before':'conflict'});}
+  const readChecks=[];for(const read of entry.plan.reads){const raw=await kbReadCurrent(plugin,read.path),currentHash=raw===null?null:await kbHash(raw);readChecks.push({...read,currentHash,state:currentHash===read.hash?'valid':'conflict'});}
+  const previewHash=await kbHash(JSON.stringify({planHash:entry.hash,files:items.map(w=>[w.path,w.currentHash]),reads:readChecks.map(r=>[r.path,r.currentHash])}));return {...entry,items,readChecks,previewHash};
+}
+async function kbReceipt(plugin,entry){
+  const path=KB_JOURNAL+'/'+entry.plan.id+'.done.md',raw=await kbReadCurrent(plugin,path);if(raw===null)return false;const data=await kbUnseal(raw);
+  if(data.knowledgeflowReceipt!==1||data.id!==entry.plan.id||data.planHash!==entry.hash||data.outcome!=='committed')throw new Error('Invalid transaction receipt');return true;
+}
+async function kbApplyTransaction(plugin,entry){
+  const inspect=await kbInspectTransaction(plugin,entry.plan.id);if(inspect.hash!==entry.hash||inspect.previewHash!==entry.previewHash)throw new Error(kl('Dateien seit der Vorschau geändert. Erneut prüfen.','Files changed since preview. Review again.'));
+  if(inspect.items.some(w=>w.state==='conflict')||inspect.readChecks.some(r=>r.state==='conflict'))throw new Error(kl('Konflikt: Eine Datei weicht von beiden gespeicherten Fassungen ab. Sie wird nicht überschrieben.','Conflict: a file differs from both saved versions. It will not be overwritten.'));
+  for(const write of inspect.items){if(write.state==='after')continue;await plugin.kbFolder(write.path.slice(0,write.path.lastIndexOf('/')));const file=plugin.app.vault.getAbstractFileByPath(write.path);
+    if(write.before===null){await plugin.app.vault.create(write.path,write.after);}else{
+      if(!file)throw new Error('Target disappeared');await plugin.app.vault.process(file,raw=>{if(raw!==write.before)throw new Error('Concurrent change');return write.after;});
+    }
+  }
+  // All writes, including audit/history, must match before completion is acknowledged.
+  for(const write of inspect.items)if(await kbReadCurrent(plugin,write.path)!==write.after)throw new Error('Concurrent change during verification');
+  for(const read of inspect.readChecks){const raw=await kbReadCurrent(plugin,read.path);if(raw===null||await kbHash(raw)!==read.hash)throw new Error('Source changed during verification');}
+  if((await kbReadJournal(plugin,KB_JOURNAL+'/'+entry.plan.id+'.md')).hash!==entry.hash)throw new Error('Journal changed during operation');
+  const receiptPath=KB_JOURNAL+'/'+entry.plan.id+'.done.md',receipt=await kbSeal({knowledgeflowReceipt:1,id:entry.plan.id,planHash:entry.hash,outcome:'committed',completed:new Date().toISOString()});
+  if(!await kbReceipt(plugin,entry))await plugin.app.vault.create(receiptPath,receipt);
+}
+function kbSnapshotView(parent,raw,role){
+  if(raw===null){parent.createEl('p',{text:kl('(Neue Datei)','(New file)')});return;}
+  if(role==='record'){try{const record=kbDecode(raw);parent.createEl('h4',{text:record.meta.title});parent.createEl('p',{text:kbLabel(record.meta.kind)+' · '+kbLabel(record.meta.state)});parent.createEl('pre',{text:kbStripLinks(record.body)});if(record.meta.userNotes){parent.createEl('h4',{text:kl('Eigene Ergänzungen','Your annotations')});parent.createEl('pre',{text:record.meta.userNotes});}const technical=parent.createEl('details');technical.createEl('summary',{text:kl('Vollständige Dateifassung','Full file snapshot')});technical.createEl('pre',{text:raw});return;}catch(_){} }
+  parent.createEl('pre',{text:raw});
+}
+class KnowledgeTransactionReview extends Modal{
+  constructor(plugin,id){super(plugin.app);this.plugin=plugin;this.id=id;}
+  async onOpen(){const c=this.contentEl;c.addClass('kf-editor-modal');applyPreferences(c,this.plugin);c.createEl('h2',{text:kl('Änderung prüfen','Review change')});const error=c.createDiv({attr:{role:'alert'}});
+    try{const entry=await kbInspectTransaction(this.plugin,this.id),done=await kbReceipt(this.plugin,entry);c.createEl('p',{text:new Date(entry.plan.created).toLocaleString(uiLocale())+' · '+kbActionLabel(entry.plan.action)});c.createEl('p',{text:done?kl('Abgeschlossen. Gespeicherte Fassungen bleiben nachvollziehbar.','Completed. Saved versions remain available.'):kl('Unterbrochen. Fortsetzen ergänzt ausschließlich die gespeicherten Änderungen. Abweichende Dateien blockieren den Vorgang.','Interrupted. Continuing applies only the saved plan. Divergent files block the operation.')});
+      for(const item of entry.items){let label=item.role==='history'?kl('Sicherung der vorherigen Fassung','Previous-version backup'):item.role==='audit'?kl('Protokolleintrag','Audit entry'):item.path;try{if(item.role==='record')label=kbDecode(item.after).meta.title;}catch(_){}
+        const row=c.createEl('details',{cls:'kf-journal-file'});row.createEl('summary',{text:label+' · '+(done?kl('protokolliert','recorded'):item.state==='conflict'?kl('Konflikt','Conflict'):item.state==='after'?kl('bereits geschrieben','already written'):kl('noch ausstehend','pending'))});row.createEl('p',{text:item.path,cls:'kf-muted'});row.createEl('h3',{text:kl('Vorher','Before')});kbSnapshotView(row,item.before,item.role);row.createEl('h3',{text:kl('Nachher','After')});kbSnapshotView(row,item.after,item.role);
+        if(done&&item.role==='record'&&item.before!==null){const current=(this.plugin.knowledge||[]).find(r=>r.file.path===item.path);if(current?.meta.state==='published'&&current.meta.kind!=='source')button(row,kl('Vorherige Fassung als Entwurf laden','Load previous version as a draft'),()=>{const editor=new KnowledgeDraft(this.plugin,null,current);editor.prefill=kbDecode(item.before);editor.open();this.close();},'kf-text-button');}
+      }
+      for(const read of entry.readChecks)c.createEl('p',{text:((this.plugin.knowledge||[]).find(r=>r.file.path===read.path)?.meta.title||read.path)+' · '+(read.state==='conflict'?kl('Quelle verändert','Source changed'):kl('Quelle geprüft','Source verified'))});
+      if(!done){const run=button(c,kl('Geprüfte Änderung fortsetzen','Continue reviewed change'),async()=>{run.disabled=true;try{await this.plugin.kbRecover(this.id,entry.previewHash);this.close();}catch(e){error.setText(e.message);}},'kf-primary');run.disabled=entry.items.some(w=>w.state==='conflict')||entry.readChecks.some(r=>r.state==='conflict');}
+    }catch(e){error.setText(e.message);}
+  }
+}
+
 // Install methods on the independent fork only. No automatic migration or remote AI calls.
 function installKnowledge(PluginClass,ViewClass){
   Object.assign(PluginClass.prototype,{
     async kbScan(){
-      const generation=(this.kbGeneration||0)+1;this.kbGeneration=generation;const records=[],invalid=[];
-      for(const file of this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_ROOT+'/')&&!f.path.startsWith(KB_ROOT+'/Protokoll/')&&!f.path.startsWith(KB_ROOT+'/Verlauf/'))){try{const raw=await this.app.vault.read(file);if(!raw.includes('knowledgeflowKnowledge:')&&!raw.includes('"knowledgeflowKnowledge"'))continue;const parsed=kbDecode(raw);if(parsed.meta.kind==='source'&&await kbHash(parsed.body)!==parsed.meta.revision)throw new Error('Source text was changed');records.push({file,raw,...parsed});}catch(e){invalid.push({path:file.path,error:e.message});}}
+      const generation=(this.kbGeneration||0)+1;this.kbGeneration=generation;if(this.kbJournalInvalid?.length){this.knowledge=[];this.knowledgeInvalid=this.kbJournalInvalid.map(item=>({...item,error:kl('Änderungsprotokoll prüfen: ','Review change log: ')+item.error}));return;}const records=[],invalid=[],pending=new Set((this.kbTransactions||[]).filter(e=>!e.done).flatMap(e=>e.paths||[]));
+      for(const file of this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_ROOT+'/')&&!f.path.startsWith(KB_ROOT+'/Protokoll/')&&!f.path.startsWith(KB_ROOT+'/Verlauf/')&&!f.path.startsWith(KB_JOURNAL+'/'))){try{if(pending.has(file.path))throw new Error(kl('Unterbrochene Änderung: im Änderungsprotokoll prüfen.','Interrupted transaction: review the change log.'));const raw=await this.app.vault.read(file);if(!raw.includes('knowledgeflowKnowledge:')&&!raw.includes('"knowledgeflowKnowledge"'))continue;const parsed=kbDecode(raw);if(parsed.meta.kind==='source'&&await kbHash(parsed.body)!==parsed.meta.revision)throw new Error('Source text was changed');records.push({file,raw,...parsed});}catch(e){invalid.push({path:file.path,error:e.message});}}
       if(this.kbGeneration!==generation||this.stopped)return;this.knowledge=records;this.knowledgeInvalid=invalid;
     },
     async kbFolder(folder){let current='';for(const part of folder.split('/')){current=current?current+'/'+part:part;if(!this.app.vault.getAbstractFileByPath(current))await this.app.vault.createFolder(current);}},
     async kbFresh(){await this.kbScan();return this.knowledge||[];},
     kbQueue(fn){const run=(this.kbWriteQueue||Promise.resolve()).catch(()=>{}).then(fn);this.kbWriteQueue=run;return run;},
-    async kbCommit(writes,action){
-      writes=[...writes,...writes.filter(w=>w.before!==null).map(w=>({path:KB_ROOT+'/Verlauf/'+crypto.randomUUID()+'.md',before:null,after:encode({knowledgeflowHistory:1,recordPath:w.path,created:new Date().toISOString()},w.before)}))];
-      const applied=[];try{
-        for(const write of writes){if(!write.path.startsWith(KB_ROOT+'/')||write.path.split('/').includes('..'))throw new Error('Unsafe knowledge path');await this.kbFolder(write.path.slice(0,write.path.lastIndexOf('/')));const file=this.app.vault.getAbstractFileByPath(write.path);if(write.before===null){if(file)throw new Error(kl('Datei bereits vorhanden. Neu laden.','File exists. Reload.'));}else if(!file||await this.app.vault.read(file)!==write.before)throw new Error(kl('Inhalt wurde inzwischen geändert. Neu laden; der Entwurf bleibt erhalten.','Content changed. Reload; your draft is preserved.'));}
-        for(const write of writes){let file=this.app.vault.getAbstractFileByPath(write.path);if(write.before===null)file=await this.app.vault.create(write.path,write.after);else await this.app.vault.process(file,raw=>{if(raw!==write.before)throw new Error('Concurrent change');return write.after;});applied.push({...write,file});}
-        const audit=KB_ROOT+'/Protokoll/'+crypto.randomUUID()+'.md';await this.kbFolder(KB_ROOT+'/Protokoll');await this.app.vault.create(audit,'# KnowledgeFlow · '+action+'\n\n'+new Date().toISOString()+'\n\n'+writes.map(w=>'- [['+w.path.replace(/\.md$/,'')+']]').join('\n')+'\n');
-      }catch(e){let conflict=false;for(const write of applied.reverse()){try{if(write.before===null){if(await this.app.vault.read(write.file)!==write.after)throw new Error('Concurrent edit');await this.app.vault.trash(write.file,true);}else await this.app.vault.process(write.file,raw=>{if(raw!==write.after)throw new Error('Concurrent edit');return write.before;});}catch(_){conflict=true;}}if(conflict)throw new Error(kl('Teiländerung: gleichzeitige Bearbeitung erkannt. Betroffene Dateien prüfen. ','Partial change: concurrent edit detected. Inspect affected files. ')+e.message);throw e;}
-      finally{await this.kbFresh();for(const leaf of this.app.workspace.getLeavesOfType(VIEW))leaf.view.render();}
+    async kbJournalScan(){
+      const generation=(this.kbJournalGeneration||0)+1;this.kbJournalGeneration=generation;const entries=[],invalid=[],files=this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_JOURNAL+'/'));
+      for(const file of files.filter(f=>!f.path.endsWith('.done.md'))){try{const entry=await kbReadJournal(this,file.path),done=await kbReceipt(this,entry);entries.push({id:entry.plan.id,action:entry.plan.action,created:entry.plan.created,count:entry.plan.writes.filter(w=>w.role==='record').length,paths:entry.plan.writes.filter(w=>w.role==='record').map(w=>w.path),done,path:file.path});}catch(e){invalid.push({path:file.path,error:e.message});}}
+      for(const file of files.filter(f=>f.path.endsWith('.done.md'))){const planPath=file.path.replace(/\.done\.md$/,'.md');if(!this.app.vault.getAbstractFileByPath(planPath))invalid.push({path:file.path,error:'Receipt has no write plan'});}
+      entries.sort((a,b)=>b.created.localeCompare(a.created));if(this.kbJournalGeneration===generation){this.kbTransactions=entries;this.kbJournalInvalid=invalid;}return {entries,invalid,pending:entries.filter(e=>!e.done)};
     },
+    async kbRefreshViews(){await this.kbJournalScan();await this.kbFresh();for(const leaf of this.app.workspace.getLeavesOfType(VIEW))leaf.view.render();},
+    kbCommit(writes,action){const requested=structuredClone(writes);return kbWriteSerial(this,async()=>{writes=requested;
+      const state=await this.kbJournalScan();if(state.invalid.length||state.pending.length)throw new Error(kl('Offene oder beschädigte Änderung im Änderungsprotokoll. Zuerst prüfen und wiederherstellen.','Pending or invalid transaction in the change log. Review and recover it first.'));
+      if(!Array.isArray(writes)||!writes.length||writes.length>100)throw new Error('Invalid write count');const seen=new Set();
+      for(const w of writes){const key=typeof w.path==='string'?w.path.normalize('NFC').toLowerCase():'';if(!kbSafeWritePath(w.path)||seen.has(key)||!(w.before===null||typeof w.before==='string')||typeof w.after!=='string'||w.path.startsWith(KB_ROOT+'/Verlauf/')||w.path.startsWith(KB_ROOT+'/Protokoll/')||(w.path.startsWith(KB_ROOT+'/Quellen/')&&w.before!==null))throw new Error('Unsafe knowledge path or write');seen.add(key);if(await kbReadCurrent(this,w.path)!==w.before)throw new Error(kl('Inhalt wurde inzwischen geändert. Neu laden; der Entwurf bleibt erhalten.','Content changed. Reload; your draft is preserved.'));}
+      const id=crypto.randomUUID(),created=new Date().toISOString(),records=writes.map(w=>({...w,role:'record'})),history=writes.filter(w=>w.before!==null).map(w=>({path:KB_ROOT+'/Verlauf/'+crypto.randomUUID()+'.md',before:null,after:encode({knowledgeflowHistory:1,recordPath:w.path,transactionId:id,created},w.before),role:'history'}));
+      const audit={path:KB_ROOT+'/Protokoll/'+id+'.md',before:null,after:'# KnowledgeFlow · '+String(action).slice(0,80)+'\n\n'+created+'\n\n'+id+'\n\n'+writes.map(w=>'- [['+w.path.replace(/\.md$/,'')+']]').join('\n')+'\n',role:'audit'},planned=[...records,...history,audit];
+      for(const w of planned){w.beforeHash=w.before===null?null:await kbHash(w.before);w.afterHash=await kbHash(w.after);}
+      const readMap=new Map();for(const write of records){const parsed=kbDecode(write.after);for(const ref of parsed.meta.sourceRefs||[]){const source=(this.knowledge||[]).find(r=>r.meta.kind==='source'&&r.meta.id===ref.id&&r.meta.revision===ref.revision);if(!source)throw new Error('Missing source revision');readMap.set(source.file.path,{path:source.file.path,hash:await kbHash(source.raw)});}}
+      const reads=[...readMap.values()];for(const read of reads){const current=await kbReadCurrent(this,read.path);if(current===null||await kbHash(current)!==read.hash)throw new Error('Source changed before write');}
+      const plan={knowledgeflowTransaction:1,reads,id,root:KB_ROOT,vault:await kbVaultIdentity(this),action:String(action).slice(0,80),created,writes:planned},raw=await kbSeal(plan);if(raw.length>16000000)throw new Error('Transaction exceeds journal size limit');
+      await this.kbFolder(KB_JOURNAL);const path=KB_JOURNAL+'/'+id+'.md';
+      try{
+        await this.app.vault.create(path,raw);const entry=await kbInspectTransaction(this,id);await kbApplyTransaction(this,entry);return id;
+      }catch(e){
+        // An API can report failure after persisting. A matching completion receipt is authoritative.
+        try{const entry=await kbReadJournal(this,path);if(await kbReceipt(this,entry))return id;}catch(_){}
+        throw new Error(kl('Änderung unterbrochen. Gespeicherten Vorgang im Änderungsprotokoll prüfen. ','Change interrupted. Review the saved transaction in the change log. ')+e.message);
+      }finally{await this.kbRefreshViews();}
+    });},
+    kbRecover(id,expectedPreviewHash){return kbWriteSerial(this,async()=>{
+      const state=await this.kbJournalScan();if(state.invalid.length)throw new Error(kl('Beschädigtes Protokoll zuerst prüfen; automatische Wiederherstellung gesperrt.','Review the invalid journal first; automatic recovery is blocked.'));
+      const entry=await kbInspectTransaction(this,id);if(!expectedPreviewHash||expectedPreviewHash!==entry.previewHash)throw new Error(kl('Vorschau veraltet. Änderung erneut prüfen.','Preview is stale. Review the change again.'));
+      if(await kbReceipt(this,entry))return;
+      if(state.pending.some(e=>e.id!==id))throw new Error(kl('Mehrere unterbrochene Vorgänge. Dateien zuerst manuell prüfen.','Multiple interrupted operations. Inspect the files first.'));
+      try{await kbApplyTransaction(this,entry);}finally{await this.kbRefreshViews();}
+    });},
     async kbHistory(record){const result=[];for(const file of this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(KB_ROOT+'/Verlauf/'))){const raw=await this.app.vault.read(file),m=raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);if(!m)continue;const meta=parseYaml(m[1]);if(meta.knowledgeflowHistory===1&&meta.recordPath===record.file.path)try{result.push({file,created:meta.created,...kbDecode(raw.slice(m[0].length))});}catch(_){}}return result.sort((a,b)=>b.created.localeCompare(a.created));},
     kbCapture(input){return this.kbQueue(async()=>{
       const title=kbText(input.title,240).trim(),body=kbText(input.body),author=kbText(input.author||'',240),url=kbCanonical(input.url);if(!title||!body.trim())throw new Error(kl('Titel und Quelltext ausfüllen.','Enter a title and source text.'));
@@ -731,7 +824,10 @@ function installKnowledge(PluginClass,ViewClass){
     openKnowledge(tab='published',project=''){this.mode='knowledge';this.showArchive=false;this.kbTab=tab;this.kbProject=project;this.render();},
     renderKnowledge(c){
       const records=this.plugin.knowledge||[],tabs=c.createDiv({cls:'kf-kb-tabs',attr:{role:'tablist'}});this.kbTab=this.kbTab||'published';
-      for(const [key,label]of Object.entries({published:kl('Wissen','Knowledge'),inbox:kl('Quellen','Sources'),review:kl('Prüfen','Review'),health:kl('Pflege','Health'),archived:kl('Archiv','Archive')})){const b=button(tabs,label,()=>{this.kbTab=key;this.render();},'kf-planner-mode'+(this.kbTab===key?' is-active':''));b.setAttribute('role','tab');b.setAttribute('aria-selected',String(this.kbTab===key));}
+      for(const [key,label]of Object.entries({published:kl('Wissen','Knowledge'),inbox:kl('Quellen','Sources'),review:kl('Prüfen','Review'),health:kl('Pflege','Health'),archived:kl('Archiv','Archive'),changes:kl('Änderungsprotokoll','Change log')})){const b=button(tabs,label,()=>{this.kbTab=key;this.render();},'kf-planner-mode'+(this.kbTab===key?' is-active':''));b.setAttribute('role','tab');b.setAttribute('aria-selected',String(this.kbTab===key));}
+      const pending=(this.plugin.kbTransactions||[]).filter(e=>!e.done),invalid=this.plugin.kbJournalInvalid||[];
+      if(pending.length||invalid.length){const warning=c.createDiv({cls:'kf-journal-warning',attr:{role:'alert'}});warning.createEl('p',{text:kl('Wissensänderungen pausiert: unterbrochene oder nicht lesbare Vorgänge prüfen.','Knowledge writes paused: review interrupted or unreadable operations.')});button(warning,kl('Änderungsprotokoll öffnen','Open change log'),()=>this.openKnowledge('changes'),'kf-text-button');}
+      if(this.kbTab==='changes'){this.renderKnowledgeChanges(c);return;}
       const toolbar=c.createDiv({cls:'kf-kb-toolbar'});button(toolbar,kl('+ Quelle erfassen','+ Capture source'),()=>new KnowledgeCapture(this.plugin).open(),'kf-primary');button(toolbar,kl('+ Wissensentwurf','+ Knowledge draft'),()=>new KnowledgeDraft(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Arbeitsauftrag','AI work request'),()=>new KnowledgeAssistant(this.plugin).open(),'kf-text-button');button(toolbar,kl('KI-Entwurf importieren','Import AI draft'),()=>new KnowledgeImport(this.plugin).open(),'kf-text-button');
       c.createEl('p',{text:kl('Lokal gespeichertes Wissen mit Quellen, eigenen Ergänzungen und bewusster Freigabe. Keine automatische KI-Verarbeitung.','Local knowledge with sources, your annotations and explicit review. No automatic AI processing.'),cls:'kf-muted'});
       if(this.plugin.knowledgeInvalid?.length){const box=c.createEl('details');box.createEl('summary',{text:kl('Nicht lesbare oder veränderte Dateien: ','Unreadable or altered files: ')+this.plugin.knowledgeInvalid.length});for(const item of this.plugin.knowledgeInvalid)box.createEl('p',{text:item.path+' · '+item.error});}
@@ -744,6 +840,15 @@ function installKnowledge(PluginClass,ViewClass){
       if(!filtered.length)grid.createEl('p',{text:kl('Noch keine passenden Inhalte. Quellen erfassen, einen Entwurf vorbereiten und unter Prüfen freigeben.','No matching content yet. Capture sources, prepare a draft and publish it under Review.')});
       for(const record of filtered.slice(0,this.kbLimit||40))this.knowledgeCard(grid,record,records);
       if(filtered.length>(this.kbLimit||40))button(c,kl('Weitere 40 anzeigen','Show 40 more'),()=>{this.kbLimit=(this.kbLimit||40)+40;this.render();},'kf-text-button');
+    },
+    renderKnowledgeChanges(c){
+      c.createEl('p',{text:kl('Gespeicherte Wissensänderungen mit Vorher-/Nachher-Fassungen. Unterbrochene Vorgänge werden erst nach deiner Prüfung fortgesetzt. Aufgaben und Projekte verwenden weiterhin ihren bisherigen Verlauf.','Saved knowledge changes with before/after snapshots. Interrupted operations continue only after your review. Tasks and projects retain their existing behavior.')});
+      button(c,kl('Protokoll neu prüfen','Refresh change log'),async()=>{try{await this.plugin.kbRefreshViews();}catch(e){report(e);}},'kf-text-button');
+      for(const item of this.plugin.kbJournalInvalid||[]){const row=c.createDiv({cls:'kf-journal-warning'});row.createEl('p',{text:item.path+' · '+item.error});row.createEl('p',{text:kl('Datei unverändert erhalten. Manuell prüfen und aus einer vertrauenswürdigen Sicherung wiederherstellen.','File kept unchanged. Inspect it manually and restore it from a trusted backup.')});}
+      const all=this.plugin.kbTransactions||[],limit=this.kbJournalLimit||30,entries=[...all.filter(e=>!e.done),...all.filter(e=>e.done).slice(0,limit)];
+      if(!entries.length)c.createEl('p',{text:kl('Noch keine protokollierten Änderungen. Bestehende ältere Verlaufsdateien bleiben erhalten.','No journaled changes yet. Existing older history files remain available.')});
+      for(const item of entries){const row=c.createEl('article',{cls:'kf-kb-card'});row.createEl('h2',{text:(item.done?kl('Abgeschlossen','Completed'):kl('Wiederherstellung nötig','Recovery needed'))+' · '+kbActionLabel(item.action)});row.createEl('p',{text:new Date(item.created).toLocaleString(uiLocale())+' · '+item.count+kl(' Datei(en)',' file(s)')});button(row,kl('Fassungen prüfen','Review versions'),()=>new KnowledgeTransactionReview(this.plugin,item.id).open(),'kf-text-button');}
+      if(all.filter(e=>e.done).length>limit)button(c,kl('Weitere 30 anzeigen','Show 30 more'),()=>{this.kbJournalLimit=limit+30;this.render();},'kf-text-button');
     },
     knowledgeCard(c,record,records){
       const card=c.createEl('article',{cls:'kf-kb-card'});card.createSpan({text:kbLabel(record.meta.kind)+' · '+kbLabel(record.meta.state),cls:'kf-eyebrow'});card.createEl('h2',{text:record.meta.title});card.createEl('p',{text:kbExcerpt(record.body,this.kbQuery||'')});
@@ -1158,6 +1263,7 @@ class TaskView extends ItemView {
     }
     button(side,kl('Wissen & Quellen →','Knowledge & sources →'),()=>this.openKnowledge(),'kf-cosmic-knowledge');
     side.createEl('p',{text:kl('Ein ruhiger Ort für klare Gedanken.','A quiet place for clear thoughts.'),cls:'kf-cosmic-caption'});
+    if((this.plugin.kbTransactions||[]).some(e=>!e.done)||this.plugin.kbJournalInvalid?.length)button(side,kl('Änderung prüfen · Wiederherstellung','Review change · Recovery'),()=>this.openKnowledge('changes'),'kf-journal-home');
     renderKnowledgeGraph(this,layout);
   }
 
@@ -1618,7 +1724,7 @@ class KnowledgeFlow extends Plugin {
   async open(){let leaf=this.app.workspace.getLeavesOfType(VIEW)[0];if(!leaf){leaf=this.app.workspace.getLeaf('tab');await leaf.setViewState({type:VIEW,active:true});}this.app.workspace.revealLeaf(leaf);}
   async scan(){
     if(this.stopped||this.seriesEditing)return;
-    await this.kbScan();
+    await this.kbJournalScan();await this.kbScan();
     const version=++this.scanVersion;const tasks=[];let invalid=0;
     const files=this.app.vault.getMarkdownFiles().filter(f=>f.path.startsWith(this.settings.folder+'/'));
     // Bound parallel reads so a large series does not serialize every disk access.
@@ -1631,7 +1737,7 @@ class KnowledgeFlow extends Plugin {
     }
     if(version!==this.scanVersion)return;
     if(await this.ensureRecurrences(tasks))return this.scan();
-    if(version!==this.scanVersion)return;const signature=JSON.stringify([today(),tasks.map(t=>[t.file.path,t.raw]).sort((a,b)=>a[0].localeCompare(b[0])),(this.knowledge||[]).map(r=>[r.file.path,r.raw]).sort((a,b)=>a[0].localeCompare(b[0])),this.knowledgeInvalid||[]]);const changed=signature!==this.scanSignature;this.scanSignature=signature;this.tasks=tasks;if(changed)for(const leaf of this.app.workspace.getLeavesOfType(VIEW))leaf.view.render();if(invalid!==this.invalidCount&&invalid)new Notice(tfmt(tr("{0} Datei(en) im KnowledgeFlow-Ordner konnten nicht gelesen werden. Details in der Entwicklerkonsole."),invalid));this.invalidCount=invalid;
+    if(version!==this.scanVersion)return;const signature=JSON.stringify([today(),tasks.map(t=>[t.file.path,t.raw]).sort((a,b)=>a[0].localeCompare(b[0])),(this.knowledge||[]).map(r=>[r.file.path,r.raw]).sort((a,b)=>a[0].localeCompare(b[0])),this.knowledgeInvalid||[],this.kbTransactions||[],this.kbJournalInvalid||[]]);const changed=signature!==this.scanSignature;this.scanSignature=signature;this.tasks=tasks;if(changed)for(const leaf of this.app.workspace.getLeavesOfType(VIEW))leaf.view.render();if(invalid!==this.invalidCount&&invalid)new Notice(tfmt(tr("{0} Datei(en) im KnowledgeFlow-Ordner konnten nicht gelesen werden. Details in der Entwicklerkonsole."),invalid));this.invalidCount=invalid;
   }
   async ensureRecurrences(tasks,reference=today()){
     if(this.seriesEditing)return 0;
@@ -1716,3 +1822,5 @@ Object.assign(module.exports.testing,{kbGraph,kbGraphExplore,kbGraphLayout3D,kbP
 Object.assign(module.exports.testing,{renderKnowledgeGraph});
 
 Object.assign(module.exports.testing,{kbDailyWelcome,kbDrawCosmos});
+
+Object.assign(module.exports.testing,{KB_JOURNAL,kbSafeWritePath,kbSeal,kbUnseal,kbValidatePlan,kbReadJournal,kbInspectTransaction,kbReceipt,kbApplyTransaction,KnowledgeTransactionReview});
