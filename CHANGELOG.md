@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-24
+
+### Added
+- Read-only knowledge network directly on My Day, above daily tasks and the eight existing function tiles.
+- Size-by-degree nodes and thin neutral lines based on actual related-page links, exact source revisions and resolvable wikilinks. No links inferred from shared tags or projects.
+- Node selection highlights neighbors, displays a note excerpt and allows opening its original Markdown note. Double-click opens a node; keyboard and native select provide alternative navigation.
+- Search highlights matching nodes, source visibility toggle, zoom buttons, pan by dragging, automatic fit/reset and expandable graph panel.
+- Graph shows only published KnowledgeFlow notes and optionally its source snapshots. Drafts, archives, tasks and other vault notes remain excluded.
+- Deterministic bounded layout, cached coordinates and explicit 180-node display cap (most connected first). Hidden-note count is shown; graph does not load or rewrite arbitrary vault files.
+- Synthetic graph fixtures in the isolated browser preview and tests for ownership, actual edges, source revisions, ambiguous links, code examples, node limits, layout and fitting.
+
+### Validation
+- Automated tests plus isolated browser preview. No installation in Obsidian, no source-data changes and no changes to TaskFlow.
+
 ## [1.0.0] - 2026-11-24
 
 ### Added

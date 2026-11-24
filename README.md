@@ -1,10 +1,18 @@
-# KnowledgeFlow 1.0
+# KnowledgeFlow 1.1
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## Included in 1.0
+## New in 1.1: your knowledge network
+
+My Day now contains a read-only network of linked notes. Larger nodes have more visible connections. Filled points are knowledge pages; rings are source snapshots. Select a node to highlight its neighbors and see its content excerpt. Open the Markdown note from the details panel, or double-click its node.
+
+Use search to highlight notes, the note selector for keyboard-friendly navigation, and the source checkbox to show/hide sources. Drag the background to pan; use +/− to zoom and Reset view to fit the graph. On the focused graph, +/−, 0 and Escape zoom, reset and clear selection. Expand increases its height without changing notes. Existing daily tasks and eight function tiles remain below it.
+
+Only real `related` links, exact source-version references and unambiguously resolvable `[[wikilinks]]` produce edges. Code examples and embedded documents are not graph links. Shared tags/projects never invent a connection. Only owned published KnowledgeFlow pages and optional source snapshots appear: this is not a whole-vault Obsidian graph. At most 180 nodes are displayed, most connected first, with an explicit omitted count. Add or approve knowledge through the existing workflow to grow the network.
+
+## Included since 1.0
 
 - **Knowledge workspace:** sources, published pages, review queue, health checks and archive. Full-text search across title, content, tags and annotations, with excerpts and project/area filters.
 - **Traceable sources:** paste source text or your own notes, optionally recording a URL and author. Source text is preserved exactly and identified by SHA-256. Repeated capture of the same URL/text version is detected; changed text creates a new revision.
@@ -32,7 +40,7 @@ Open [`preview/index.html`](preview/index.html) in a desktop browser, or run `np
 
 ## Optional installation later
 
-**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.0.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
+**No installation is part of the initial repository delivery.** When you decide to test it, use a new disposable vault. With BRAT, add `NoanP/obsidian-knowledgeflow` and select release `1.1.0`. Plugin ID: `knowledgeflow`; required Obsidian version: `1.7.2` or later. All three release assets are required: `main.js`, `manifest.json`, `styles.css`. Do not overwrite `taskflow-kanban` or copy TaskFlow's settings into this plugin.
 
 Native Obsidian and mobile validation are not completed for 1.0. The inherited task layer has automated coverage; the new knowledge workflow is tested through an in-memory vault and browser simulation. Cross-device conflicts and process/power failures are not atomic transactions. Use normal backups before any later real-vault pilot.
 

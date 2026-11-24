@@ -512,6 +512,75 @@ class KnowledgeImport extends Modal{
   }
 }
 
+// A read-only graph of real links between owned KnowledgeFlow notes. No inferred edges.
+function kbGraph(records,{sources=true,limit=180}={}){
+  limit=Math.max(1,Math.min(500,Number.isFinite(limit)?Math.floor(limit):180));
+  const eligible=records.filter(r=>r.meta.state==='published'||(sources&&r.meta.kind==='source'&&r.meta.state==='inbox')).filter(r=>r.file?.path?.startsWith(KB_ROOT+'/'));
+  const byPath=new Map(eligible.map(r=>[r.file.path,r])),byId=new Map(),aliases=new Map(),edges=new Map();
+  for(const r of eligible){if(r.meta.kind!=='source')byId.set(r.meta.id,r);for(const alias of [r.meta.title,r.file.path.replace(/\.md$/,''),r.file.path.split('/').pop().replace(/\.md$/,'')]){const key=alias.toLocaleLowerCase(),old=aliases.get(key);aliases.set(key,old===undefined||old===r?r:null);}}
+  const connect=(a,b,type)=>{if(!b||a.file.path===b.file.path||!byPath.has(b.file.path))return;const pair=[a.file.path,b.file.path].sort(),key=JSON.stringify(pair),old=edges.get(key);if(old){if(!old.types.includes(type))old.types.push(type);}else edges.set(key,{source:pair[0],target:pair[1],types:[type]});};
+  for(const r of eligible){
+    for(const id of Array.isArray(r.meta.related)?r.meta.related:[])connect(r,byId.get(id),'related');
+    for(const ref of Array.isArray(r.meta.sourceRefs)?r.meta.sourceRefs:[])connect(r,eligible.find(s=>s.meta.kind==='source'&&s.meta.id===ref.id&&s.meta.revision===ref.revision),'source');
+    // Fenced code and inline code are examples, not note links. Generated links are
+    // already covered by structured source/related references.
+    const text=kbStripLinks(r.body||'').replace(/(^|\n) {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n {0,3}\2[^\n]*(?=\n|$)/g,'').replace(/`[^`\n]*`/g,'');
+    for(const match of text.matchAll(/(?<!!)\[\[([^\]\n]+)\]\]/g)){let target=match[1].split('|')[0].split('#')[0].trim().replace(/\.md$/,'');if(!target)continue;const base=r.file.path.slice(0,r.file.path.lastIndexOf('/')+1),parts=[];for(const part of (base+target).split('/')){if(part==='..')parts.pop();else if(part!=='.')parts.push(part);}const relative=parts.join('/')+'.md';connect(r,byPath.get(target+'.md')||byPath.get(relative)||aliases.get(target.toLocaleLowerCase()),'wikilink');}
+  }
+  const degree=new Map(eligible.map(r=>[r.file.path,0]));for(const e of edges.values()){degree.set(e.source,degree.get(e.source)+1);degree.set(e.target,degree.get(e.target)+1);}
+  const chosen=[...eligible].sort((a,b)=>degree.get(b.file.path)-degree.get(a.file.path)||a.file.path.localeCompare(b.file.path)).slice(0,limit),ids=new Set(chosen.map(r=>r.file.path));
+  const visibleEdges=[...edges.values()].filter(e=>ids.has(e.source)&&ids.has(e.target)).sort((a,b)=>(a.source+a.target).localeCompare(b.source+b.target));
+  const visibleDegree=new Map(chosen.map(r=>[r.file.path,0]));for(const e of visibleEdges){visibleDegree.set(e.source,visibleDegree.get(e.source)+1);visibleDegree.set(e.target,visibleDegree.get(e.target)+1);}
+  return {nodes:chosen.map(record=>({id:record.file.path,title:record.meta.title,kind:record.meta.kind,degree:visibleDegree.get(record.file.path),record})),edges:visibleEdges,totalNodes:eligible.length,totalEdges:edges.size,omitted:eligible.length-chosen.length};
+}
+function kbGraphLayout(graph,width=1000,height=460){
+  const hash=s=>{let h=2166136261;for(const ch of s)h=Math.imul(h^ch.charCodeAt(0),16777619);return h>>>0;},n=graph.nodes.length;
+  if(!n)return [];
+  const nodes=graph.nodes.map(node=>{const h=hash(node.id),a=(h%6283)/1000,r=40+((h>>>10)%100)/100*Math.min(width,height)*.36;return {...node,x:width/2+Math.cos(a)*r,y:height/2+Math.sin(a)*r};}),index=new Map(nodes.map((v,i)=>[v.id,i])),forces=nodes.map(()=>({x:0,y:0}));
+  for(let step=0;step<100;step++){
+    for(let i=0;i<n;i++){forces[i].x=(width/2-nodes[i].x)*.016;forces[i].y=(height/2-nodes[i].y)*.016;}
+    for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){let dx=nodes[i].x-nodes[j].x,dy=nodes[i].y-nodes[j].y;if(Math.abs(dx)+Math.abs(dy)<.01){dx=1;dy=.5;}const d2=Math.max(70,dx*dx+dy*dy),f=850/d2;forces[i].x+=dx*f;forces[i].y+=dy*f;forces[j].x-=dx*f;forces[j].y-=dy*f;}
+    for(const edge of graph.edges){const i=index.get(edge.source),j=index.get(edge.target),dx=nodes[j].x-nodes[i].x,dy=nodes[j].y-nodes[i].y,d=Math.max(1,Math.hypot(dx,dy)),f=(d-70)*.035;forces[i].x+=dx/d*f;forces[i].y+=dy/d*f;forces[j].x-=dx/d*f;forces[j].y-=dy/d*f;}
+    const speed=1-step/140;for(let i=0;i<n;i++){nodes[i].x=Math.max(26,Math.min(width-26,nodes[i].x+Math.max(-12,Math.min(12,forces[i].x))*speed));nodes[i].y=Math.max(26,Math.min(height-26,nodes[i].y+Math.max(-12,Math.min(12,forces[i].y))*speed));}
+  }
+  return nodes;
+}
+function kbGraphFit(nodes,width=1000,height=460){if(!nodes.length)return {x:0,y:0,scale:1};const xs=nodes.map(n=>n.x),ys=nodes.map(n=>n.y),left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys),scale=Math.min(4,(width-100)/Math.max(80,right-left),(height-100)/Math.max(80,bottom-top));return {x:width/2-(left+right)/2*scale,y:height/2-(top+bottom)/2*scale,scale};}
+function renderKnowledgeGraph(view,parent){
+  const graph=kbGraph(view.plugin.knowledge||[],{sources:view.kbGraphSources!==false}),section=parent.createEl('section',{cls:'kf-graph-section',attr:{'aria-label':kl('Wissensnetz','Knowledge network')}}),header=section.createDiv({cls:'kf-graph-header'}),heading=header.createDiv();
+  heading.createEl('h2',{text:kl('Dein Wissensnetz','Your knowledge network')});heading.createEl('p',{text:kl('Notizen und ihre echten Verbindungen. Wähle einen Knoten, um seine Nachbarn zu entdecken.','Notes and their real connections. Select a node to explore its neighbors.'),cls:'kf-muted'});
+  const toolbar=section.createDiv({cls:'kf-graph-toolbar'}),search=toolbar.createEl('input',{type:'search',placeholder:kl('Notiz im Netz finden …','Find a note in the network …'),attr:{'aria-label':kl('Notiz im Netz finden','Find a note in the network')}});search.value=view.kbGraphQuery||'';
+  const showSources=toolbar.createEl('label',{cls:'kf-kb-check'}),check=showSources.createEl('input',{type:'checkbox'});check.checked=view.kbGraphSources!==false;showSources.createSpan({text:kl('Quellen anzeigen','Show sources')});check.onchange=()=>{view.kbGraphSources=check.checked;view.render();};
+  const expand=button(header,view.kbGraphExpanded?kl('Kompakter','Compact'):kl('Vergrößern','Expand'),()=>{view.kbGraphExpanded=!view.kbGraphExpanded;section.classList.toggle('is-expanded',view.kbGraphExpanded);expand.setText(view.kbGraphExpanded?kl('Kompakter','Compact'):kl('Vergrößern','Expand'));expand.setAttribute('aria-expanded',String(!!view.kbGraphExpanded));},'kf-text-button');expand.setAttribute('aria-expanded',String(!!view.kbGraphExpanded));section.classList.toggle('is-expanded',!!view.kbGraphExpanded);
+  const count=section.createEl('p',{cls:'kf-graph-count',attr:{role:'status'}});count.setText(graph.nodes.length+kl(' Notizen · ',' notes · ')+graph.edges.length+kl(' Verbindungen',' connections')+(graph.omitted?' · '+graph.omitted+kl(' weitere Notizen; angezeigt werden die am stärksten verknüpften.',' more notes; showing the most connected.') :''));
+  if(!graph.nodes.length){section.createDiv({cls:'kf-graph-empty',text:kl('Dein Wissensnetz wächst mit deinen Quellen und freigegebenen Notizen. Verknüpfe Seiten oder hinterlege Quellen, damit Verbindungen sichtbar werden.','Your network grows with your sources and published notes. Link pages or add source references to reveal connections.')});button(section,kl('Wissen & Quellen öffnen →','Open knowledge & sources →'),()=>view.openKnowledge(),'kf-text-button');return;}
+  const layoutKey=JSON.stringify([graph.nodes.map(n=>[n.id,n.title]),graph.edges]);if(view.kbGraphCache?.key!==layoutKey)view.kbGraphCache={key:layoutKey,nodes:kbGraphLayout(graph)};
+  const cached=new Map(view.kbGraphCache.nodes.map(n=>[n.id,{x:n.x,y:n.y}])),positions=graph.nodes.map(n=>({...n,...cached.get(n.id)})),byId=new Map(positions.map(n=>[n.id,n])),body=section.createDiv({cls:'kf-graph-body'}),stage=body.createDiv({cls:'kf-graph-stage'}),svg=svgElement(stage,'svg',{viewBox:'0 0 1000 460',role:'group','aria-label':kl('Interaktives Wissensnetz: Knoten auswählen, Hintergrund ziehen. Zoom mit den Tasten.','Interactive knowledge network: select nodes, drag the background. Use buttons to zoom.'),tabindex:'0'}),scene=svgElement(svg,'g'),edgeEls=[],nodeEls=[];
+  const detail=body.createEl('aside',{cls:'kf-graph-detail',attr:{'aria-label':kl('Notizdetails','Note details'),'aria-live':'polite'}});
+  const fitted=kbGraphFit(positions);let transform=view.kbGraphTransform?.key===layoutKey?{...view.kbGraphTransform}:{...fitted},selected=view.kbGraphSelected&&byId.has(view.kbGraphSelected)?view.kbGraphSelected:'',drag=null;
+  const applyTransform=()=>{scene.setAttribute('transform',`translate(${transform.x} ${transform.y}) scale(${transform.scale})`);view.kbGraphTransform={...transform,key:layoutKey};};
+  const zoom=factor=>{const old=transform.scale,next=Math.max(.4,Math.min(4,old*factor));transform.x=500-(500-transform.x)*next/old;transform.y=230-(230-transform.y)*next/old;transform.scale=next;applyTransform();};
+  const controls=stage.createDiv({cls:'kf-graph-zoom'});button(controls,'+',()=>zoom(1.25),'kf-text-button').setAttribute('aria-label',kl('Netz vergrößern','Zoom in'));button(controls,'−',()=>zoom(.8),'kf-text-button').setAttribute('aria-label',kl('Netz verkleinern','Zoom out'));button(controls,kl('Zentrieren','Reset view'),()=>{transform={...fitted};applyTransform();},'kf-text-button');
+  for(const edge of graph.edges){const a=byId.get(edge.source),b=byId.get(edge.target),line=svgElement(scene,'line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,class:'kf-graph-edge'});edgeEls.push({edge,line});}
+  const update=()=>{
+    const query=searchText(search.value.trim()),neighbors=new Set([selected]);for(const e of graph.edges)if(e.source===selected)neighbors.add(e.target);else if(e.target===selected)neighbors.add(e.source);
+    for(const {node,group}of nodeEls){const match=!query||searchText(node.title).includes(query);group.classList.toggle('is-muted',!match||(!!selected&&!neighbors.has(node.id)));group.classList.toggle('is-selected',node.id===selected);group.setAttribute('aria-pressed',String(node.id===selected));}
+    for(const {edge,line}of edgeEls){line.classList.toggle('is-neighbor',!!selected&&(edge.source===selected||edge.target===selected));line.classList.toggle('is-muted',!!selected&&edge.source!==selected&&edge.target!==selected);}
+    detail.empty();const node=byId.get(selected);if(node){detail.createSpan({text:kbLabel(node.kind),cls:'kf-eyebrow'});detail.createEl('h3',{text:node.title});detail.createEl('p',{text:node.degree+kl(' sichtbare Verbindungen',' visible connections')});detail.createEl('p',{text:kbExcerpt(node.record.body)});button(detail,kl('Notiz öffnen','Open note'),()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file),'kf-primary');const adjacent=graph.nodes.filter(n=>neighbors.has(n.id)&&n.id!==selected);if(adjacent.length)detail.createEl('h4',{text:kl('Verknüpfte Notizen','Connected notes')});for(const n of adjacent)button(detail,n.title,()=>{selected=n.id;view.kbGraphSelected=selected;update();},'kf-text-button');button(detail,kl('Auswahl aufheben','Clear selection'),()=>{selected='';view.kbGraphSelected='';update();},'kf-text-button');}
+    else{detail.createEl('h3',{text:kl('Gedanken entdecken','Explore ideas')});detail.createEl('p',{text:kl('Große Knoten haben mehr Verbindungen. Gefüllte Punkte sind Wissensseiten, Ringe sind Quellen. Ein Klick zeigt Details, ein Doppelklick öffnet die Notiz.','Larger nodes have more connections. Filled dots are knowledge pages; rings are sources. Click for details, double-click to open a note.')});}
+    const matches=graph.nodes.filter(n=>!query||searchText(n.title).includes(query));picker.empty();picker.createEl('option',{value:'',text:kl('Notiz auswählen …','Choose a note …')});for(const node of matches)picker.createEl('option',{value:node.id,text:node.title});picker.value=matches.some(n=>n.id===selected)?selected:'';if(query)detail.createEl('p',{text:matches.length+kl(' passende Notizen im sichtbaren Netz.',' matching notes in the visible network.')});
+  };
+  const picker=toolbar.createEl('select',{attr:{'aria-label':kl('Notiz im Netz auswählen','Select a note in the network')}});picker.onchange=()=>{selected=picker.value;view.kbGraphSelected=selected;update();};search.oninput=()=>{view.kbGraphQuery=search.value;update();};
+  for(const node of positions){const group=svgElement(scene,'g',{class:'kf-graph-node'+(node.kind==='source'?' is-source':''),transform:`translate(${node.x} ${node.y})`,role:'button',tabindex:'0','aria-label':node.title+' · '+node.degree+kl(' Verbindungen',' connections'),'aria-pressed':'false'});svgElement(group,'circle',{r:Math.min(16,5+Math.sqrt(node.degree)*2)});svgElement(group,'circle',{r:22,class:'kf-graph-hit'});const label=svgElement(group,'text',{y:-22,'text-anchor':'middle'});label.textContent=node.title.length>35?node.title.slice(0,32)+'…':node.title;svgElement(group,'title').textContent=node.title;
+    group.onclick=()=>{selected=node.id;view.kbGraphSelected=selected;update();};group.ondblclick=()=>view.plugin.app.workspace.getLeaf(false).openFile(node.record.file);group.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();selected=node.id;view.kbGraphSelected=selected;update();}};nodeEls.push({node,group});}
+  svg.onpointerdown=e=>{if(e.button!==0||e.target.closest('.kf-graph-node'))return;const matrix=svg.getScreenCTM();if(!matrix)return;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const local=point.matrixTransform(matrix.inverse());drag={id:e.pointerId,x:local.x,y:local.y,tx:transform.x,ty:transform.y};svg.setPointerCapture(e.pointerId);};
+  svg.onpointermove=e=>{if(!drag||e.pointerId!==drag.id)return;const matrix=svg.getScreenCTM();if(!matrix)return;const point=svg.createSVGPoint();point.x=e.clientX;point.y=e.clientY;const local=point.matrixTransform(matrix.inverse());transform.x=drag.tx+local.x-drag.x;transform.y=drag.ty+local.y-drag.y;applyTransform();};
+  svg.onpointerup=svg.onpointercancel=()=>{drag=null;};svg.onlostpointercapture=()=>{drag=null;};
+  svg.onkeydown=e=>{if(['+','=','-','0','Escape'].includes(e.key)){e.preventDefault();if(e.key==='+'||e.key==='=')zoom(1.25);else if(e.key==='-')zoom(.8);else if(e.key==='0'){transform={...fitted};applyTransform();}else{selected='';view.kbGraphSelected='';update();}}};
+  applyTransform();update();
+  section.createEl('p',{cls:'kf-muted kf-graph-help',text:kl('Hintergrund ziehen zum Verschieben · + / − zum Zoomen · 0 zum Zentrieren · keine künstlichen Verbindungen. Angezeigt werden nur KnowledgeFlow-Notizen, keine fremden Vault-Dateien.','Drag background to pan · + / − to zoom · 0 to reset · no invented connections. Only KnowledgeFlow notes are shown, not other vault files.')});
+}
+
 class KnowledgeCapture extends Modal{
   constructor(plugin){super(plugin.app);this.plugin=plugin;}
   onOpen(){
@@ -1028,6 +1097,7 @@ class TaskView extends ItemView {
   applyFilter(preset){this.boardMode='tasks';const f=filterSnapshot(preset.filters);this.query=f.query;this.projectFilter=f.project;this.tag=f.tag;this.statusFilter=f.status;this.priorityFilter=f.priority;this.dueFilter=f.due;this.currentPreset=preset.id;if(this.mode==='home')this.mode='board';this.render();}
   renderHome(c,tasks,presets){
     const knowledge=c.createDiv({cls:'kf-kb-home'});knowledge.createEl('h2',{text:kl('Dein Wissen','Your knowledge')});knowledge.createSpan({text:(this.plugin.knowledge||[]).filter(r=>r.meta.state==='published').length+kl(' Wissensseiten · ',' knowledge pages · ')+(this.plugin.knowledge||[]).filter(r=>r.meta.state==='review').length+kl(' Entwürfe zur Prüfung',' drafts for review')});button(knowledge,kl('Wissen & Quellen öffnen →','Open knowledge & sources →'),()=>this.openKnowledge(),'kf-primary');
+    renderKnowledgeGraph(this,c);
     const overview=homeOverview(tasks),summary=c.createDiv({cls:'kf-day-summary'});
     const timed=overview.today.filter(t=>dateValue(t.meta.scheduled)===today()&&timeMinutes(t.meta.scheduledTime)!==null).length;
     summary.createSpan({text:tfmt(tr("{0} {1} für heute · {2} {3}"),overview.today.length,overview.today.length===1?tr('Aufgabe'):tr('Aufgaben'),timed,timed===1?tr('Zeitblock'):tr('Zeitblöcke')),attr:{role:'status','aria-live':'polite'}});
@@ -1611,3 +1681,7 @@ Object.assign(module.exports.testing,{KB_ROOT,kbDecode,kbHash,kbCanonical,kbRefs
 Object.assign(module.exports.testing,{kbAssistantContext});
 
 Object.assign(module.exports.testing,{kbStripLinks,kbWithLinks});
+
+Object.assign(module.exports.testing,{kbGraph,kbGraphLayout});
+
+Object.assign(module.exports.testing,{kbGraphFit});
