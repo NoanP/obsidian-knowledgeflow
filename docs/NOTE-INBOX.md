@@ -31,3 +31,7 @@ Capture, edit, archive, restore and processing use the existing persisted change
 ## Delivery boundary
 
 Repository-only delivery with automated tests and the synthetic in-memory browser host. Existing TaskFlow, Obsidian installations, vaults and hotkeys are untouched. Native Obsidian/YAML/sync/mobile acceptance remains a separately authorized test.
+
+## Reviewed link suggestions (1.12)
+
+Open notes can explicitly request related-note candidates, inspect exact passages and approve individual connections. Nothing is preselected or applied on opening. Approved related IDs survive conversion into a review draft, with graph edges visible only after separate publication. See [matching and recovery](LINK-SUGGESTIONS.md).

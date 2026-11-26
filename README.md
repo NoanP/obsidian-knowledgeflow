@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.11
+# KnowledgeFlow 1.12
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.12: reviewed connection suggestions
+
+Choose **Verknüpfungen vorschlagen / Suggest links** on an open inbox note or a review draft. Matching runs locally against published KnowledgeFlow notes. Each candidate shows shared terms and exact excerpts from both notes. Nothing is preselected; closing the preview changes nothing. Select only useful connections, then **Auswahl freigeben / Approve selection**.
+
+Approval adds only those related-page references to the new note, preserving its text and other metadata. Target notes stay unchanged. Inbox links carry through to the knowledge draft; the network displays them after the note is separately published. Changed notes invalidate the preview; history, pinned dependencies and explicit recovery protect interrupted approvals. This is lexical matching, not a claim of semantic understanding. [Workflow, matching limits and recovery](docs/LINK-SUGGESTIONS.md).
 
 ## New in 1.11: quick capture and personal note inbox
 

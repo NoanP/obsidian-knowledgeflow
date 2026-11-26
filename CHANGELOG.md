@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-11-26
+
+### Added
+- Local connection suggestions for open personal inbox notes and knowledge review drafts, with shared-term explanations, exact excerpts and unchecked individual selection before explicit approval.
+- Deterministic bounded lexical ranking against owned, unambiguous published notes; exclude existing forward/reverse connections, sources, unreviewed content and tag/project-only matches.
+- Narrow, journaled link approval with full-record target pins, stale-preview rejection, idempotent retries, before-version history and explicit interrupted-write recovery. Target notes and original bodies remain unchanged.
+- Recovery validates approved literal snapshots independently of later ranking changes, keeping completed journals readable across matcher improvements.
+- Visible approved connections on inbox/conversion/review previews, retained when an inbox note becomes a review draft and displayed as real graph edges after separate publication.
+
+### Validation and scope
+- 339 automated tests pass. Coverage includes read-only suggestions, matching/scope limits, exact evidence, selection isolation, concurrent edits, duplicate prevention, stale targets, interrupted approval/recovery and conversion-to-graph behavior.
+- No automatic link creation, provider call, task creation or installation. Lexical candidates require human judgment; no semantic certainty is claimed.
+- Repository-only release. TaskFlow and all existing Obsidian vaults/installations/settings remain unchanged.
+
 ## [1.11.0] - 2026-11-26
 
 ### Added

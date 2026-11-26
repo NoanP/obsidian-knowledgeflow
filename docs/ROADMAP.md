@@ -16,6 +16,8 @@
 
 | 1.11 | Quick capture, personal note inbox and explicitly reviewed, journaled conversion to knowledge drafts |
 
+| 1.12 | Local, explainable and explicitly approved link suggestions for new inbox notes and review drafts, with pinned recovery |
+
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |

@@ -48,3 +48,7 @@ Result adoption uses the knowledge change journal and a deterministic draft path
 ## Personal inbox (1.11)
 
 Capture/edit/archive/restore/conversion are journaled. A conversion plan includes the exact personal source snapshot (unless reused), review draft and processed original; newly staged sources are hash-verified before the plan is persisted. Recovery handles already-written identical outputs and rejects changed targets. An identical capture/conversion retry retains its identity after completion, including after restart. Review pending transactions before retrying. Unsaved capture text exists only in session memory and cannot be recovered from the journal; Cancel on an edit discards unsaved input.
+
+## Reviewed connections (1.12)
+
+A link-approve plan can change only the origin related IDs and updated time, with one history and audit record. Selected published target snapshots are hash-pinned read dependencies, never writes. Pending approvals quarantine the origin. A changed target/origin blocks explicit recovery; identical persisted output is reused. After success an identical retry adds no copy. See [link suggestion workflow](LINK-SUGGESTIONS.md).

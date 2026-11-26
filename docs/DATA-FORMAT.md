@@ -50,3 +50,7 @@ The envelope is plaintext local state, protected against accidental corruption/s
 ## Personal note inbox (1.11)
 
 `KnowledgeFlow/Wissen/NotizInbox/<UUID>.md` holds personal quick notes marked `quickNote: 1`, `kind: page` and `inboxStatus: open|processed|archived`. Only open notes use `state: inbox`; processed/archived use `state: archived`, never published. `sourceRefs` stays empty; optional `project`, `created`, `updated` and a `quickConversion` source/draft/request-hash reference retain workflow context. Body bytes and unknown metadata survive archive/processing. Read [the inbox workflow](NOTE-INBOX.md) for conversion and duplicate rules.
+
+## Reviewed links (1.12)
+
+Accepted suggestions use the existing `related` page-ID array on open inbox notes/review drafts, with only `updated` additionally changed. A `link-approve` journal contains `linkApproval` with origin hash and selected full target snapshots/hashes/matching evidence, target read dependencies, one origin write, one before-history write and one audit write. The validator constrains this shape; recovery checks pinned target versions. No new note kind or background proposal file is introduced.
