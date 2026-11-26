@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-11-26
+
+### Changed
+- Implemented the approved Synapsenraum home: full workspace model canvas, compact daily welcome and eight translucent navigation tiles, charcoal surfaces, fine real edges and stable pastel note-type colors.
+- Replaced the stationary decorative galaxy core/stars with a native WebGL renderer for real x/y/z note coordinates. No new runtime dependency, remote script, decorative fake nodes or inferred graph edges.
+- Added an explicit Pan mode, right/middle/Shift drag and Shift-arrow panning. Touch pinch combines translation and zoom; orbit is not constrained by the old pitch clamp.
+- Preserved whole-model translation, zoom and orientation through selection, search/filter/neighborhood changes, redraw, resize and workspace navigation. Refit/recenter is performed only on first data display or an explicit Fit/Focus action.
+- Kept graph placement stable across filters by caching the underlying graph layout; removed Cartesian clipping walls that produced artificial box-shaped sparse networks.
+- Added graphics-context handling, software perspective fallback, accessible note selection, collision-limited labels and explicit release of WebGL resources when leaving the graph.
+
+### Validation and scope
+- 297 automated tests pass, including unbounded whole-model pan, unchanged camera across selection/filter/rerender/topology changes, inset fitting, combined pinch/pan, no-write fallback, context loss, real-vertex submission, resource disposal and organic layout bounds.
+- Isolated browser acceptance verified WebGL mode, a 173-note/209-edge synthetic network, camera-preserving selection/filter/zoom and exact camera restoration after returning from Board. The normal task creation action remains on Board.
+- Node colors represent explicit note kinds; shared color/project/tag never fabricates a link. Up to 500 base nodes and 240 visible nodes remain bounded with omitted counts.
+- Camera state is view-local, retained across navigation in that view; plugin restart/new leaves initialize a fresh camera. Native Obsidian/mobile/GPU-driver acceptance remains a separately authorized task.
+- Repository-only release. TaskFlow and all existing Obsidian vaults/installations/settings remain unchanged.
+
 ## [1.9.0] - 2026-11-24
 
 ### Added

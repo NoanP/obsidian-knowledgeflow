@@ -1,4 +1,4 @@
-# Graph research and decisions — 2026-11-24
+# Graph research and historical decisions — 2026-11-24
 
 This is a design synthesis, not a benchmark of the cited products. No external plugin is installed or copied into KnowledgeFlow. Only public documentation was consulted; implementation is original within this repository and reuses its own 1.1 graph data model.
 
@@ -15,7 +15,7 @@ The global graph provides orientation; the local graph provides a way to investi
 
 We therefore retain sources, actual links and the normal knowledge view as the reliable navigation/data layer. 3D exploration is read-only. Same-tag/project membership does not create edges or pretend to establish evidence. Every node opens an existing owned Markdown note. Drafts, archived records and unrelated vault notes are excluded.
 
-## Layout and interaction
+## Historical 1.2 layout and interaction
 
 The user's requested 90/10 split is interpreted vertically on desktop: approximately 90% network workspace (including compact controls), 10% eight navigation tiles. Narrow and short windows relax the split for reachable controls. Home contains no task lists or day-statistic charts.
 
@@ -26,3 +26,11 @@ Default labels are limited to hovered/selected notes. Optional additional labels
 ## Follow-up validation
 
 Use an explicitly approved disposable Obsidian vault to validate host styling, multiple windows, actual mobile touch, persisted lifecycle and realistic collection size later. Until then browser/DOM simulations and math/storage tests define the tested scope. No existing vault, original TaskFlow repository or Obsidian installation is modified by this release.
+
+## Current approved design: Synapsenraum (1.10, 2026-11-26)
+
+The user selected an original Synapsenraum preview, then explicitly requested publication in KnowledgeFlow only. The current home has a full canvas behind compact left navigation and no stationary galaxy or decorative core/stars. Actual x/y/z graph data is drawn in native WebGL, with a software perspective fallback when WebGL is unavailable. This supersedes the software-only rendering and vertical 90/10 composition described in the historical section above.
+
+Pan is a first-class mode: translation applies to the entire network and is not clamped to a center. Rotation and zoom remain separate. Camera state survives local graph controls and view rerenders/navigation; an explicit Fit/Focus is required to realign it after initial display. Global positions are reused while filtering, so a neighborhood does not reshape itself into a new synthetic graph. Note type colors provide orientation without pretending to be inferred topic clusters.
+
+The layout uses bounded integration and final radial normalization, without Cartesian wall clipping. No fake edges, points, relationship inference or article/private product implementation is added. See [the current interaction contract](SYNAPSENRAUM.md).

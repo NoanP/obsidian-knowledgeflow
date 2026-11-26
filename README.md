@@ -1,10 +1,18 @@
-# KnowledgeFlow 1.9
+# KnowledgeFlow 1.10
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
 
-## New in 1.9: controlled AI automation
+## New in 1.10: Synapsenraum
+
+The approved Synapsenraum replaces the fixed galaxy core with a freely movable 3D note network: charcoal background, pastel note-type colors, fine real connections, compact left-hand welcome and eight translucent navigation tiles. There are no decorative stars, fake nodes or fixed center object.
+
+Use **Verschieben / Pan**, Shift/right/middle drag, or Shift + arrow keys to move the entire model. Drag in **Drehen / Rotate** mode rotates it; wheel, pinch and +/− zoom. Selecting a note, searching, changing filters, entering a neighborhood and returning from another workspace preserve your camera. Only **Zentrieren / Fit view** or **Hier fokussieren / Focus here** explicitly realigns it.
+
+A native WebGL renderer uses real x/y/z positions without a runtime library or remote code. A software perspective fallback and accessible selector remain available when graphics support is limited. [Interaction, color meanings and limitations](docs/SYNAPSENRAUM.md).
+
+## Controlled AI automation (1.9)
 
 Open **Wissen & Quellen → KI-Automatisierung**, or **Settings → KI & Budget**. The optional OpenAI connection is disabled by default. Set current input/output prices and per-job/daily/monthly USD limits, then provide an API key for this session only. Nothing connects automatically, and the manual assistant workflow remains available.
 
@@ -44,20 +52,18 @@ Text notes retain their exact decoded UTF-8 text. ChatGPT/Claude conversation JS
 
 Open **Wissen & Quellen → Änderungsprotokoll / Knowledge & sources → Change log** to inspect before/after versions, resume interrupted operations after a fresh review, or load previous published content as a new draft. Before changing a source/draft/page, KnowledgeFlow persists a local write-ahead plan with content snapshots and SHA-256 checks. Pending or invalid operations block further knowledge writes; partial records stay out of the knowledge index. Recovery preserves divergent external edits and requires manual conflict resolution. Source dependencies are checked as well as output files.
 
-This covers knowledge capture, drafts, publishing, annotations, archive and restore. Tasks, recurrence, project settings and permanent trash operations retain their previous behavior. The journal supports resuming persisted operations after a restart; it is not a full-vault backup, cross-device lock or a guarantee against power loss. See [recovery and limitations](docs/RECOVERY.md).
+This covers knowledge capture, drafts, publishing, annotations, archive and restore. Reviewed task-suggestion creation also uses the journal (1.8); other task edits, recurrence, project settings and permanent trash operations retain their previous behavior. The journal supports resuming persisted operations after a restart; it is not a full-vault backup, cross-device lock or a guarantee against power loss. See [recovery and limitations](docs/RECOVERY.md).
 
-## Cosmic 3D homepage
+## Interactive 3D homepage
 
-The left side has a daily welcome, local thought and eight small translucent action tiles. The right side contains the interactive knowledge network, decorative stars and a warm light core. Decorations are never records or links. Daily tasks and statistics remain in their dedicated workspaces. Expand **Netz erkunden / Explore network** for search, note selection and filters. Narrow panes stack the sidebar above the graph.
+Home shows a daily welcome/thought, eight compact navigation tiles and the Synapsenraum. Daily tasks/statistics remain in their own workspaces. The model canvas spans the workspace behind the compact navigation. Narrow panes stack navigation above the model. The home scene uses the approved dark palette; other screens retain their existing appearance settings.
 
-The network uses real x/y/z node coordinates, force-directed placement, a rotatable perspective camera and depth-ordered sphere/ring drawing. It is a software-rendered 3D scene on Canvas 2D, not a CSS-rotated flat graph and not a WebGL/Three.js dependency. There are no large-vault frame-rate guarantees.
-
-- Drag to orbit; Shift-drag (or middle-button drag) to pan; wheel/pinch and +/− controls zoom. Arrow keys orbit, 0 fits the scene, Escape clears selection, Enter opens a selected note.
-- Click/tap selects a note and highlights adjacent connections; double-click/tap opens the note. The note selector and details panel provide an alternative to targeting small nodes.
-- Neighborhood focuses on a selected note and its neighbors at a selectable depth of 1–3 connection steps. Whole network returns to the global view.
-- View & filters controls source snapshots, unlinked notes, labels and connection types. Search matches all terms across title, body, tags and area; it does not implement Obsidian's full query language.
-- Labels appear on hover/selection by default. Optional additional labels have distance and overlap limits. Unselected edges fade to keep the view readable.
-- Rendering is requested only when the view changes, is resized or receives input. There is no automatic spinning or permanently running physics animation. Closing/navigating disconnects observers, cancels queued frames and removes resize listeners.
+- Orbit, whole-model pan and zoom are independent. No periodic scan, filter, selection or resize forces a fit. Camera state stays in the current view instance across navigation, not in Markdown or plugin settings.
+- Click/tap selects and highlights neighboring links; double-click/tap opens the note. **Netz erkunden / Explore network** exposes search, an accessible note selector, filters and neighborhood depth.
+- **Umgebung / Neighborhood** limits visible records to actual neighbors at 1–3 connection steps; **Gesamtes Netz / Whole network** exits that filter. These controls do not reset the camera. **Hier fokussieren / Focus here** is a separate explicit camera action.
+- Source snapshots, orphan notes, labels and connection types can be filtered. Search matches all terms across title, body, tags and area; it is not Obsidian's full query language.
+- Colors identify actual note kinds, not inferred semantic groups or certainty: pages blue, meetings rose, cases sage, sources apricot, decisions lavender. Labels and the legend provide text equivalents.
+- Bounded force placement runs on topology changes; frames are requested only on input/resize. No automatic spinning or perpetual physics. WebGL resources, pending frames and listeners are released when leaving the graph. There are no large-vault frame-rate guarantees.
 
 Only actual `related` links, exact source-version references and unambiguously resolved `[[wikilinks]]` create edges. No relationships are inferred from tags or projects. Only owned published KnowledgeFlow pages and optional source snapshots appear. The base graph is capped at 500 nodes and each 3D scene at 240, most connected first; omitted counts are visible. Filters/neighborhoods operate on that base, not on arbitrary vault notes beyond the base limit.
 
@@ -122,7 +128,3 @@ Edit `main.js`, `styles.css`, tests and docs here. Bump `manifest.json`, `packag
 - [QMD](https://github.com/tobi/qmd), a possible optional search integration, not bundled.
 
 MIT, copyright 2026 NoanP. TaskFlow's original MIT notice is retained in [LICENSE](LICENSE). No third-party article text, private vault contents or external project code is included.
-
-### Cosmic homepage (1.3)
-
-A local, time-aware welcome and daily thought sit beside eight small translucent navigation tiles. The real-coordinate 3D network occupies the right side, with a decorative warm core and background stars. These decorations do not represent records or create links. Expand **Netz erkunden / Explore network** for search, accessible note selection and graph filters. Drag to orbit, Shift-drag to pan and scroll to zoom; existing keyboard controls remain available. The home scene is deliberately dark, while other screens retain their existing appearance settings. Narrow panes stack the welcome above the graph. Daily task lists and statistics remain in their dedicated workspaces.

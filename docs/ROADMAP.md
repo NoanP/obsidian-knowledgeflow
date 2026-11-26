@@ -12,6 +12,7 @@
 | 1.7 | Read-only quality candidates for links, similar passages and narrow possible statement conflicts |
 | 1.8 | Knowledge/project/task navigation and individually approved checklist-to-task suggestions with provenance and journal recovery |
 | 1.9 | Opt-in provider queue with per-job data-transfer approval, local budgets, pause/restart controls and separately reviewed result drafts |
+| 1.10 | Approved Synapsenraum: real WebGL 3D, free whole-model movement, stable camera across filters/navigation and pastel note-type colors |
 
 The following are candidates, subject to user approval rather than automatic implementation:
 

@@ -62,3 +62,11 @@ pause and classify interrupted sends before accepting new execution. AI output i
 untrusted text; only explicit adoption may create a journaled review draft. No tool
 execution, automatic publishing or task creation. Use simulated transports for tests
 and browser preview; never incur real API charges as part of repository validation.
+
+Synapsenraum is read-only and must never fabricate nodes/edges as decoration. Keep
+real spatial coordinates and explicit type colors; no central galaxy/core. Whole-model
+pan is unrestricted. Preserve camera state through selections, filters, topology
+refreshes, resize and view navigation; only initialize once or refit on explicit
+Fit/Focus. Reuse base positions across filters. Dispose GPU resources/listeners on
+cleanup and retain selector access when graphics fail. Synthetic dense graphs belong
+only to preview fixtures, never to production note data.
