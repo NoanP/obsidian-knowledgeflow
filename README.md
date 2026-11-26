@@ -1,8 +1,16 @@
-# KnowledgeFlow 1.10
+# KnowledgeFlow 1.11
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.11: quick capture and personal note inbox
+
+Choose **Schnellnotiz / Quick note** on Home, **+ Schnellnotiz** in **Wissen & Quellen → Notiz-Inbox**, or the command **Schnellnotiz erfassen / Capture quick note**. Only the thought itself is required; title and project are optional. Save with **⌘/Ctrl + Enter** in the text field. Assign an Obsidian hotkey to the command yourself; this release does not replace an existing binding.
+
+Saved notes live in `KnowledgeFlow/Wissen/NotizInbox/`. Search, filter by status/project, edit, assign a project, archive or restore. A quick note does not create a task, publish knowledge, enter the network or send anything to AI. **Wissensentwurf vorbereiten / Prepare knowledge draft** previews the exact text and, after your explicit click, saves an immutable personal source and a review draft together. Publication remains a separate approval.
+
+Closing a new capture keeps its unsaved text only in memory until the plugin unloads; **Ungespeicherten Text verwerfen / Discard unsaved text** clears that buffer. Closing an edit cancels its unsaved changes. Saved originals, timestamps and project references remain in the inbox after processing. [Workflow, storage and recovery](docs/NOTE-INBOX.md).
 
 ## New in 1.10: Synapsenraum
 

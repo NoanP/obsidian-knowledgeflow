@@ -6,5 +6,5 @@ class PreviewModal{constructor(app){this.app=app;this.overlay=document.createEle
 class PreviewNotice{constructor(text){const el=document.body.createDiv({text,cls:'preview-notice',attr:{role:'alert'}});setTimeout(()=>el.remove(),6000);}}
 window.module={exports:{}};window.require=()=>({Plugin:class{},ItemView:PreviewItemView,Modal:PreviewModal,Notice:PreviewNotice,PluginSettingTab:class{},parseYaml:JSON.parse,stringifyYaml:JSON.stringify,normalizePath:s=>s,setIcon:(el,name)=>{el.textContent=({settings:'⚙','calendar-days':'▦','folder-kanban':'▣','repeat':'↻','chart-column':'▥',archive:'▤','trash-2':'▱','kanban-square':'▥'})[name]||'□';}});
 window.PreviewModal=PreviewModal;
-document.querySelector('#theme').onclick=()=>document.body.classList.toggle('theme-light');
+document.querySelector('#theme').onclick=()=>{const light=document.body.classList.toggle('theme-light');document.body.classList.toggle('theme-dark',!light);};
 window.addEventListener('error',event=>{document.body.createDiv({text:event.message,cls:'preview-error',attr:{role:'alert'}});});

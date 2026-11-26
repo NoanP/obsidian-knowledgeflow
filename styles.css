@@ -666,3 +666,30 @@
 
 /* Automation content is inert text and inherits KnowledgeFlow's neutral palette. */
 .kf-ai-result { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 55vh; overflow: auto; }
+
+/* Personal capture: compact home shortcuts and readable, local inbox. */
+.kf-quick-note-actions{display:flex;flex-wrap:wrap;gap:5px;margin:14px 0 0;pointer-events:auto}
+.kf-root .kf-quick-note-actions button{font-size:11px!important;padding:5px 8px!important;border:1px solid #b3bec326!important;border-radius:6px;background:#a8b5bf09!important;color:#bac3c9!important;min-height:27px}
+.kf-root .kf-quick-note-actions button:hover{background:#b8c6d118!important;color:#eef1f4!important}
+.kf-quick-editor form{display:flex;flex-direction:column;gap:14px}
+.kf-quick-editor .kf-quick-body{width:100%;min-height:190px;max-height:50vh;resize:vertical;box-sizing:border-box;line-height:1.6;font:inherit;padding:14px;border:1px solid var(--background-modifier-border);border-radius:10px;background:var(--background-primary);color:var(--text-normal)}
+.kf-quick-editor details>summary{cursor:pointer;color:var(--text-muted);margin-bottom:10px}
+.kf-quick-editor select{max-width:100%;margin-top:8px}
+.kf-quick-hint{font-size:12px;line-height:1.6;margin-top:16px}
+.kf-quick-full{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;font:inherit;line-height:1.6;padding:12px;background:var(--background-secondary);border-radius:8px}
+.kf-inbox-note{min-width:0}
+.kf-inbox-note h2,.kf-inbox-note p{overflow-wrap:anywhere}
+.kf-inbox-note .kf-kb-actions{flex-wrap:wrap}
+.kf-inbox-note summary{cursor:pointer;color:var(--text-muted)}
+
+.kf-quick-editor button,.kf-quick-promote button{background:var(--background-secondary)!important;color:var(--text-normal)!important;border:1px solid var(--background-modifier-border)!important}
+.kf-quick-editor button:hover,.kf-quick-promote button:hover{background:var(--background-modifier-hover,var(--background-primary))!important}
+.kf-quick-editor button:disabled,.kf-quick-promote button:disabled{opacity:.55;cursor:wait}
+.kf-quick-editor button.kf-primary,.kf-quick-promote button.kf-primary{font-weight:600}
+
+.kf-root .kf-note-inbox button{background:var(--background-secondary)!important;color:var(--text-normal)!important;border:1px solid var(--background-modifier-border)!important}
+.kf-root .kf-note-inbox button:hover{background:var(--background-modifier-hover,var(--background-primary))!important}
+.kf-root .kf-note-inbox button.kf-primary{font-weight:600}
+.kf-note-inbox .kf-kb-toolbar{gap:10px;display:flex;align-items:center;flex-wrap:wrap}
+
+.kf-root .kf-note-inbox button.kf-primary{background:var(--background-secondary)!important;color:var(--text-normal)!important;border-color:var(--background-modifier-border)!important}

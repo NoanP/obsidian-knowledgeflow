@@ -44,3 +44,7 @@ Pause prevents later dispatch but does not cancel a paid request already accepte
 Unreadable/foreign/conflicting queue files block AI operations and are preserved. Restore from a trusted backup after comparing retained requests and provider usage; there is no automatic overwrite or reset button. The seal detects corruption, not malicious control of the vault or cross-device races. General backup remains necessary.
 
 Result adoption uses the knowledge change journal and a deterministic draft path. If interrupted, inspect and resume that transaction first; repeating adoption then finds the same existing draft. No provider request is repeated as part of draft recovery. Completed draft creation is undone through normal knowledge draft/archive handling rather than deleting cost history.
+
+## Personal inbox (1.11)
+
+Capture/edit/archive/restore/conversion are journaled. A conversion plan includes the exact personal source snapshot (unless reused), review draft and processed original; newly staged sources are hash-verified before the plan is persisted. Recovery handles already-written identical outputs and rejects changed targets. An identical capture/conversion retry retains its identity after completion, including after restart. Review pending transactions before retrying. Unsaved capture text exists only in session memory and cannot be recovered from the journal; Cancel on an edit discards unsaved input.

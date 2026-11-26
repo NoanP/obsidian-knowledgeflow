@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-11-26
+
+### Added
+- Minimal quick capture from Home, the personal inbox and an assignable Obsidian command. Text is the only required field; title derives from the first line, with optional title/project and in-editor Cmd/Ctrl+Enter saving.
+- Personal Markdown note inbox with open/processed/archived statuses, text/project filters, full text disclosure, editing/project assignment and reversible archive.
+- Explicit conversion preview creates an immutable personal source, a source-pinned review draft and the processed original in one recoverable journal transaction. Publication and task approval stay separate.
+- Stable capture IDs, deterministic conversion IDs/request hashes, conflict checks, preserved unknown metadata and exact original bodies. New capture buffers remain in memory on close until plugin unload; a discard action clears only unsaved text.
+
+### Validation and scope
+- 316 automated tests pass. Tests cover capture validation, exact text, scope isolation, project assignment, stale edits, archive/restore, idempotency, source reuse, interrupted writes, recovery and concurrent edit conflicts.
+- Personal notes are excluded from published knowledge, graph, answers, AI source selection and task suggestions until explicitly processed and reviewed as appropriate.
+- No automatic provider call, operating-system capture service, default hotkey override or installation. Repository-only release; TaskFlow and all existing Obsidian vaults/settings remain unchanged.
+
 ## [1.10.0] - 2026-11-26
 
 ### Changed

@@ -82,3 +82,11 @@ Native Obsidian/mobile transport, real account/model availability, token-estimat
 Browser acceptance used only the in-memory host. Confirmed native WebGL rendering, the original 23 synthetic notes and an explicitly populated 173-note/209-edge example network. Recorded camera values remained identical after pan+zoom, note selection, neighborhood and source filters. Leaving for Board and returning restored the exact same camera. Rotation changed orientation without resetting translation/zoom. The stationary core/star decoration is absent; navigation and text labels remain readable in the dark home. No tasks/statistics return to home, and New task remains a Board action.
 
 No real Obsidian application, native mobile device, real-vault content or external AI provider was used. Touch behavior and narrow fitting are automated fixture checks, not a native-device certification. Performance on arbitrary large vaults/driver combinations is not guaranteed.
+
+## Personal quick capture and note inbox (1.11)
+
+316 automated tests pass, including 19 new tests for exact body preservation, title derivation, input limits, duplicate clicks/retries, deliberately separate captures, active project validation, unknown metadata, stale edits, reversible archiving, source reuse, conversion idempotency across restart, failure after persisted writes, reviewed recovery and concurrent conflicts. Inbox content does not become an answer/graph/task candidate or trigger provider calls.
+
+Browser acceptance uses synthetic memory-only data: capture from Home; close/reopen retains unsaved session text; Ctrl+Enter saves; open count and inbox entry appear; the network stays unchanged before processing; edit and assign a project; archive and restore; preview and explicitly convert to a review draft; processed original remains; Home still has eight navigation tiles and no task creation action. Native Obsidian/YAML/sync/mobile behavior remains outside the current repository-only scope.
+
+The 1.11 capture and conversion dialogs were visually checked at the normal viewport and capture at 440 px width; dark/light controls use local neutral surfaces and explicit text contrast. The preview-only debug toolbar is not shipped as plugin UI.

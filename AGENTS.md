@@ -70,3 +70,5 @@ refreshes, resize and view navigation; only initialize once or refit on explicit
 Fit/Focus. Reuse base positions across filters. Dispose GPU resources/listeners on
 cleanup and retain selector access when graphics fail. Synthetic dense graphs belong
 only to preview fixtures, never to production note data.
+
+Personal note inbox: quickNote records belong only under Wissen/NotizInbox and never become published directly. Preserve original bodies/unknown metadata. Conversion requires explicit preview approval, one journaled source+review draft+processed original operation and stable idempotent identities. Keep notes outside graph/answers/AI sources/task suggestions until the proper separate processing/review gates. Home quick-note controls are compact actions, not a ninth navigation tile or a task creation action. Do not silently assign hotkeys or persist unsaved capture buffers.

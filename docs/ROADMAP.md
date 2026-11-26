@@ -14,6 +14,8 @@
 | 1.9 | Opt-in provider queue with per-job data-transfer approval, local budgets, pause/restart controls and separately reviewed result drafts |
 | 1.10 | Approved Synapsenraum: real WebGL 3D, free whole-model movement, stable camera across filters/navigation and pastel note-type colors |
 
+| 1.11 | Quick capture, personal note inbox and explicitly reviewed, journaled conversion to knowledge drafts |
+
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |
