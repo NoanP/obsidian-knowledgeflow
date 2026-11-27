@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-11-27
+
+### Added
+- Rediscover view/command with six initial due published notes, explicit importance and elapsed-time ranking, project filtering and visible/hidden management views.
+- Durable explicit review (30 days, important 14), seven-day snooze, reversible hide and importance controls. Opening a note/overview records no passive reading telemetry.
+- Narrow journaled feedback, original history, idempotent retries, stale-record checks and explicit interrupted recovery; note bodies and knowledge dates stay unchanged.
+
+### Validation and scope
+- 408 automated tests pass, including ranking/read-only selection, metadata preservation, due dates/DST, restart persistence, hide/restore, duplicate clicks, stale records, scope filtering, malformed state, interruptions and forged-plan rejection.
+- Local, on-demand resurfacing with normal scan refresh; no notification scheduler, provider request, mastery claim, task creation or installation.
+- Repository-only release. TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.15.0] - 2026-11-27
 
 ### Added

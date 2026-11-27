@@ -746,3 +746,5 @@
 @media(max-width:650px){.kf-hub-layout{grid-template-columns:minmax(0,1fr)}.kf-hub-navigation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.kf-hub-groups{grid-template-columns:minmax(0,1fr)}}
 
 .kf-weekly{min-width:0;line-height:1.6}.kf-weekly .kf-hub-card h4{font-size:14px;margin:0 0 8px}.kf-weekly .kf-hub-group h3{font-size:16px}.kf-root .kf-weekly button{background:var(--background-secondary)!important;color:var(--text-normal)!important;border:1px solid var(--background-modifier-border)!important;white-space:normal;height:auto;padding:8px 11px;border-radius:7px;box-shadow:none}.kf-weekly input[type=date]{max-width:100%}
+
+.kf-rediscovery{min-width:0;line-height:1.6}.kf-root .kf-rediscovery button{background:var(--background-secondary)!important;color:var(--text-normal)!important;border:1px solid var(--background-modifier-border)!important;height:auto;white-space:normal;padding:8px 10px;border-radius:7px;box-shadow:none}.kf-rediscovery .kf-kb-actions{display:flex;gap:7px;flex-wrap:wrap}.kf-rediscovery .kf-hub-card h3{font-size:16px;margin:0 0 8px}

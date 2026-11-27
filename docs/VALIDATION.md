@@ -114,3 +114,7 @@ Browser acceptance used synthetic in-memory records: navigate to Topic hubs, sel
 ## Weekly knowledge review (1.15)
 
 395 automated tests pass, including 12 new tests for local week/year/DST boundaries, new-versus-updated date groups, current backlog scope, read-only refresh, unknown dates, project isolation, ownership/duplicate exclusions, stale/forged actions, dynamic backlog and limits. Browser acceptance with synthetic data verified current/past week selection, unchanged current inbox/draft backlog for a past week, inbox-assistant cancellation, draft-review entry without publishing, and dark/light project-filtered layouts. No real vault, provider or Obsidian process was used; native YAML/sync/mobile acceptance remains separate.
+
+## Rediscovery (1.16)
+
+408 automated tests pass, including 13 new rediscovery tests for read-only selection, age ranking, narrow metadata/body/date preservation, fixed review/snooze calendar dates, restart/hide/restore, idempotency, stale/foreign scope, malformed state, interrupted writes, explicit recovery conflicts and forged plans. Browser acceptance with synthetic data verified marking an important note, its 14-day review date, removal from the due list, management under All visible notes, hiding, Hidden notes restoration, and dark/light layouts. No real vault, provider or Obsidian process was used. Native YAML/sync/mobile validation remains separate.

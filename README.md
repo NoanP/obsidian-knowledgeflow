@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.15
+# KnowledgeFlow 1.16
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.16: rediscover knowledge
+
+Open **Wissen & Quellen → Wiederentdecken / Knowledge & sources → Rediscover**, or the Rediscover knowledge command. Six due published notes appear initially, ranked by elapsed time since explicit review (otherwise creation), with a 14-day importance boost. Each explains its selection. All visible notes and Hidden notes provide management views, with a project filter and pagination.
+
+Opening the overview or a note does not record reading. Explicitly choose **Gelesen / Reviewed** to confirm it and schedule its next appearance in 30 days, or 14 days when important. Snooze for seven days, mark/unmark importance, hide indefinitely, or restore a hidden note. Feedback is journaled and retained locally across restarts. Note body, publication/update dates, tags, links and annotations stay intact. [Intervals, limits, recovery and scope](docs/REDISCOVERY.md).
 
 ## New in 1.15: weekly knowledge review
 
