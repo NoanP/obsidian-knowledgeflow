@@ -1,4 +1,4 @@
-# Knowledge search and evidence (1.17)
+# Knowledge search and evidence (1.18)
 
 ## Use
 
@@ -6,7 +6,7 @@ Open **Wissen & Quellen → Wissenssuche** or the **Wissenssuche mit Belegen** c
 
 The answer consists of up to six verbatim original passages with numbered references. **Textstelle prüfen** validates and displays the exact passage. **Notiz öffnen ↗** validates the current file again and opens it in a new tab. References point to KnowledgeFlow-owned knowledge notes and exact source snapshots, including explicitly imported note/chat copies. They never silently open a different source revision or fetch an external URL.
 
-Questions and result sets remain in memory. No query, answer, task, source, draft, audit entry or setting is written by searching. No external model, embedding service, API key, provider subscription or background recording is involved. Closing the view clears its answer/question state; unloading clears the derived index.
+Questions and result sets remain in memory. No query, answer, task, source, draft, audit entry or setting is written by searching. Word/concept search needs no model or provider. The separately activated desktop semantic mode uses a local Ollama embedding process after explicit search; no remote provider or background recording is involved. See [local embeddings](LOCAL-EMBEDDINGS.md). Closing the view clears its answer/question state; unloading clears the derived index.
 
 ## What an answer means
 
@@ -45,6 +45,6 @@ A query accepts up to 1,000 characters and 30 distinct non-stopword terms. Long 
 
 ## Validation
 
-428 automated tests pass, covering immutable/read-only queries, exact Unicode/CRLF quotes and offsets, annotation/chat sections, stale/missing/forged citations, direct-link behavior, source-version issues, conflicting text retention, copied-text deduplication, exclusions, indexing bounds and content-sensitive cache invalidation.
+456 automated tests pass, covering immutable/read-only queries, exact Unicode/CRLF quotes and offsets, annotation/chat sections, stale/missing/forged citations, direct-link behavior, source-version issues, conflicting text retention, copied-text deduplication, exclusions, indexing bounds and content-sensitive cache invalidation.
 
 A fixed synthetic set has 10 topic queries (network, SIM, backup, calendar, privacy, handover); each expected topic appears in the top three passages. Two unrelated astronomy/quantum questions return no passages. This fixture is intentionally small and authored alongside the code: it is a regression check, not an independent effectiveness benchmark. The 1.17 suite adds twelve synthetic bilingual concept queries with word-only controls. Real question quality, vocabulary outside the catalog, multi-hop reasoning and native Obsidian behavior remain outside that validation.

@@ -1,5 +1,7 @@
 # Local related-concept search (1.17)
 
+The separate 1.18 [local neural embedding mode](LOCAL-EMBEDDINGS.md) supports free paraphrases. This document describes the unchanged dictionary-based fallback and link matcher.
+
 ## Use
 
 Open Knowledge & sources → Ask knowledge. **Words + related concepts** is the default matching mode; **Word matches only** preserves the previous BM25-style lexical retrieval. Both search only owned published notes and valid source snapshots, with optional note/source scope. Search text, matching mode and results are view-local, not saved settings. Changing mode invalidates the displayed results until a fresh search.

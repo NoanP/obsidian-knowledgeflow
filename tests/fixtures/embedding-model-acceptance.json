@@ -1,0 +1,61 @@
+{
+  "model": {
+    "model": "embeddinggemma:300m",
+    "digest": "0800cbac9c2064dde519420e75e512a83cb360de3ad5df176185dc69652fc515"
+  },
+  "engine": "llama.cpp isolated test bridge",
+  "samples": [
+    {
+      "id": "focus",
+      "rank": 2,
+      "top": "Abends zur Ruhe kommen",
+      "cosine": 0.24261391878998148
+    },
+    {
+      "id": "safety",
+      "rank": 1,
+      "top": "Dateien schützen",
+      "cosine": 0.4726063303518488
+    },
+    {
+      "id": "watering",
+      "rank": 1,
+      "top": "Gemüse im Sommer",
+      "cosine": 0.43842231147337357
+    },
+    {
+      "id": "planning",
+      "rank": 1,
+      "top": "Gemeinsam abstimmen",
+      "cosine": 0.426037914092767
+    },
+    {
+      "id": "sleep",
+      "rank": 1,
+      "top": "Abends zur Ruhe kommen",
+      "cosine": 0.4386537411066519
+    },
+    {
+      "id": "spending",
+      "rank": 1,
+      "top": "Ausgaben im Blick",
+      "cosine": 0.4374366224403249
+    },
+    {
+      "id": "onboarding",
+      "rank": 1,
+      "top": "Erster Arbeitstag",
+      "cosine": 0.5221592010043664
+    },
+    {
+      "id": "recall",
+      "rank": 1,
+      "top": "Gelerntes behalten",
+      "cosine": 0.33518173782663613
+    }
+  ],
+  "top1": 7,
+  "top3": 8,
+  "date": "2026-11-27",
+  "scope": "Eight authored synthetic German paraphrases; not an independent benchmark. Actual GGUF weights via isolated llama.cpp bridge, not native Ollama/Electron."
+}

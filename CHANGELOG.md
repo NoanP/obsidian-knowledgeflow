@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-11-27
+
+### Added
+- Opt-in local neural semantic search for free paraphrases using Ollama and embeddinggemma:300m, 768-dimensional normalized vectors and cosine ranking.
+- Session-only connection, bounded in-memory cache, batched indexing, progress, cancellation, adjustable similarity cutoff and explicit disconnect/index discard.
+- Fixed loopback transport without redirects/cloud fallback; model digest and corpus-version checks, strict vector validation, bounded responses and request deadlines.
+- Preserved exact original quotations/source revisions and scope/active-chat-branch exclusions. Existing word/concept search and all reviewed link/journal workflows remain available.
+
+### Validation and scope
+- 456 tests pass, including 28 embedding-specific cases and native loopback failure tests. Browser workflow checked with clearly labeled simulated vectors.
+- Real EmbeddingGemma weights tested via an isolated llama.cpp CPU bridge on eight synthetic German paraphrase questions: 7/8 top-1, 8/8 top-3. Small authored fixture, not an independent benchmark or native Ollama/Obsidian certification.
+- Separate local Ollama/model setup required; desktop only. No automatic installation/download, persisted vectors, background inference or note changes. Semantic matching is not confidence or factual support.
+- Repository-only KnowledgeFlow release. TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.17.0] - 2026-11-27
 
 ### Added

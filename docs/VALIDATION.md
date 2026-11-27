@@ -122,3 +122,7 @@ Browser acceptance used synthetic in-memory records: navigate to Topic hubs, sel
 ## Related-concept search (1.17)
 
 428 automated tests pass, including twenty new concept-search/integration cases. The authored twelve-query bilingual fixture retrieves intended notes with no word-only hits; it is not an independent semantic-quality benchmark. Synthetic browser acceptance verified related-word search, word-only controls, exact evidence, unchecked link proposals and explicit approval, stale-result invalidation, light/dark presentation. No providers, model downloads, real vaults or Obsidian processes were used. See [implementation and limitations](CONCEPT-SEARCH.md).
+
+## Local neural embeddings (1.18)
+
+456 automated tests pass, including 28 vector/protocol/scope/cache/staleness/cancellation cases. Real loopback fixtures cover native HTTP safety/failure behavior. A real EmbeddingGemma 300m GGUF ran in an isolated llama.cpp CPU test bridge: eight authored German paraphrases achieved 7/8 top-1, 8/8 top-3. This is not a native Ollama/Electron or independent retrieval benchmark. The browser uses explicitly simulated vectors for setup, initial refusal, search, evidence, disconnect and word-only controls; light/dark layout was inspected. A cutoff formatting bug was found and fixed. No user vault, Obsidian or TaskFlow files were accessed/changed. [Reproduction and limitations](LOCAL-EMBEDDINGS.md).

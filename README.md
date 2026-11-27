@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.17
+# KnowledgeFlow 1.18
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.18: local neural semantic search
+
+**Wissenssuche → Semantisch · lokale Embeddings** retrieves free paraphrases using real 768-dimensional EmbeddingGemma vectors and cosine ranking. Open **Lokale Embeddings · Einrichtung & Datenschutz**, explicitly connect the separately running local model, and search. KnowledgeFlow only connects to `127.0.0.1:11434` and the locally installed `embeddinggemma:300m`; it never downloads a model, uses a cloud fallback or changes a note while searching. This desktop feature needs a separate Ollama setup, not included in the BRAT files. [Setup, privacy, limits and real-model validation](docs/LOCAL-EMBEDDINGS.md).
+
+Activation and the bounded vector cache last only for the plugin session. Progress, cancellation, an adjustable cosine cutoff and **Trennen & Index verwerfen** remain under your control. Semantic results retain exact original excerpts, full-version verification, source references and warnings. Similarity is not factual support or confidence. Existing word/concept search, link approvals and all journals remain available and unchanged.
 
 ## New in 1.17: related wording in search and link suggestions
 
