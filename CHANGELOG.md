@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-11-27
+
+### Added
+- Local DE/EN concept-expanded knowledge search alongside the existing word ranking, with a word-only mode and literal related-word explanations on exact-version excerpts.
+- Shared concept matching for reviewed link suggestions and the inbox assistant. Multiple aliases in one group count once; approvals remain explicit and unchecked initially.
+- Synthetic concept-search examples and twenty regression/integration tests, including active chat branches, stale targets, idempotency and interrupted recovery.
+
+### Validation and scope
+- 428 automated tests pass; browser acceptance verifies related/word-only search, evidence inspection, link preview/approval, stale results and light/dark presentation.
+- Bounded symbolic vocabulary, not neural embeddings, unrestricted paraphrase understanding, factual agreement or a certainty score. No model downloads, provider requests, new runtime dependencies or persistent indexes.
+- Existing version-1 journals retain frozen literal evidence validation without reranking; note bodies and target notes stay intact.
+- Repository-only KnowledgeFlow release. TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.16.0] - 2026-11-27
 
 ### Added

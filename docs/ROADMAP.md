@@ -24,6 +24,7 @@
 
 | 1.15 | Live weekly knowledge review: dated published insights, current inbox/approval backlog and verified workflow entry points |
 
+| 1.17 | Local concept-expanded search and reviewed link matching, word-only mode, pinned explanations and backward-compatible recovery |
 | 1.16 | Rediscovery with explicit importance/review/snooze/hide feedback, durable journaled metadata and age-based selection |
 
 The following are candidates, subject to user approval rather than automatic implementation:

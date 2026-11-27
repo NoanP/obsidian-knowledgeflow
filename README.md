@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.16
+# KnowledgeFlow 1.17
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.17: related wording in search and link suggestions
+
+**Wissenssuche → Wörter + verwandte Begriffe** combines existing word ranking with a bundled German/English concept vocabulary: “Datensicherung” can find “Backup”, “Fehlersuche” can find “Troubleshooting”. Each expanded hit shows the actual query/quoted words. **Nur Worttreffer / Word matches only** retains the original word search. Scope, exact source versions and citation verification apply in both modes.
+
+Link suggestions and the inbox assistant use the same concept groups, with at least two distinct matching signals and an explicit unchecked preview. Accepted links keep the existing journal/history/recovery guarantees. This is bounded symbolic concept matching, **not neural embeddings, unrestricted paraphrase understanding or a factual agreement score**. Unknown concepts need word overlap; no model downloads, providers, extra dependencies or automatic note changes. [Matching, limits and examples](docs/CONCEPT-SEARCH.md).
 
 ## New in 1.16: rediscover knowledge
 

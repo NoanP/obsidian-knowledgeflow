@@ -1,4 +1,4 @@
-# Knowledge search and evidence (1.6)
+# Knowledge search and evidence (1.17)
 
 ## Use
 
@@ -10,7 +10,7 @@ Questions and result sets remain in memory. No query, answer, task, source, draf
 
 ## What an answer means
 
-This is extractive retrieval: ranked existing text, not a generated explanatory synthesis. Lexical similarity is a discovery signal, not proof that a passage fully answers a question. Missing query words are disclosed. Title-only matches appear separately as discovery links and never become quoted answer passages. No result means the current indexed material provides no matching passage; it does not prove the topic is absent everywhere or false.
+This is extractive retrieval: ranked existing text, not a generated explanatory synthesis. Word overlap and related concepts are discovery signals, not proof that a passage fully answers a question. Missing unmatched query terms are disclosed. Expanded matches display literal query/passage pairs. Title-only matches appear separately as discovery links and never become quoted answer passages. No result means the current indexed material provides no matching passage; it does not prove the topic is absent everywhere or false.
 
 A citation establishes the quoted text's exact file and version. It does not establish that the text is true. Source links stored on a published note are displayed separately as **Hinterlegte Quellen dieser Notiz**. Their existence does not automatically validate each selected note passage. Inference, ambiguity, missing source revisions, ambiguous source identities and multiple/later-imported source revisions get explicit notices when known from metadata.
 
@@ -22,7 +22,7 @@ Conflicting passages are retained independently, not combined into an invented r
 - Drafts, archived pages, generated link blocks, journal/history/audit files, tasks and unimported vault notes are excluded. Selecting an original note for import in 1.5 remains the explicit route for adding it to this corpus.
 - Personal annotations on published pages are searched as a separate section and labelled accordingly; they do not inherit a separate claim-review certification.
 - Imported chat text uses the same active-branch/order view as the source importer. Alternate ChatGPT branches retained in raw JSON are not retrieved as answers. Broken chat views are excluded rather than falling back to arbitrary raw branches.
-- Text normalization handles case, diacritics, German ß and limited suffix forms; common German/English question words are omitted. Ranking uses a BM25-style weighted title/body calculation. It is lexical retrieval, not semantic search, translation or a general natural-language reasoning engine.
+- Text normalization handles case, diacritics, German ß and limited suffix forms; common German/English question words are omitted. Ranking combines the existing BM25-style weighted title/body calculation with explicit DE/EN concept expansion by default. Select Word matches only to disable expansion. This is bounded symbolic matching, not neural embeddings, unrestricted paraphrase understanding, translation or a general reasoning engine. See [Concept search](CONCEPT-SEARCH.md).
 - The index is derived in memory from exact raw-record pins. Changed, added, removed or reordered records invalidate its reuse. No persistent index or extra runtime library is added.
 
 ## Citation checks
@@ -45,6 +45,6 @@ A query accepts up to 1,000 characters and 30 distinct non-stopword terms. Long 
 
 ## Validation
 
-206 automated tests pass, covering immutable/read-only queries, exact Unicode/CRLF quotes and offsets, annotation/chat sections, stale/missing/forged citations, direct-link behavior, source-version issues, conflicting text retention, copied-text deduplication, exclusions, indexing bounds and content-sensitive cache invalidation.
+428 automated tests pass, covering immutable/read-only queries, exact Unicode/CRLF quotes and offsets, annotation/chat sections, stale/missing/forged citations, direct-link behavior, source-version issues, conflicting text retention, copied-text deduplication, exclusions, indexing bounds and content-sensitive cache invalidation.
 
-A fixed synthetic set has 10 topic queries (network, SIM, backup, calendar, privacy, handover); each expected topic appears in the top three passages. Two unrelated astronomy/quantum questions return no passages. This fixture is intentionally small and authored alongside the code: it is a regression check, not an independent effectiveness benchmark. Real questions, synonyms, multi-hop reasoning and real export/native Obsidian behavior remain outside that validation.
+A fixed synthetic set has 10 topic queries (network, SIM, backup, calendar, privacy, handover); each expected topic appears in the top three passages. Two unrelated astronomy/quantum questions return no passages. This fixture is intentionally small and authored alongside the code: it is a regression check, not an independent effectiveness benchmark. The 1.17 suite adds twelve synthetic bilingual concept queries with word-only controls. Real question quality, vocabulary outside the catalog, multi-hop reasoning and native Obsidian behavior remain outside that validation.

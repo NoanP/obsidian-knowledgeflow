@@ -118,3 +118,7 @@ Browser acceptance used synthetic in-memory records: navigate to Topic hubs, sel
 ## Rediscovery (1.16)
 
 408 automated tests pass, including 13 new rediscovery tests for read-only selection, age ranking, narrow metadata/body/date preservation, fixed review/snooze calendar dates, restart/hide/restore, idempotency, stale/foreign scope, malformed state, interrupted writes, explicit recovery conflicts and forged plans. Browser acceptance with synthetic data verified marking an important note, its 14-day review date, removal from the due list, management under All visible notes, hiding, Hidden notes restoration, and dark/light layouts. No real vault, provider or Obsidian process was used. Native YAML/sync/mobile validation remains separate.
+
+## Related-concept search (1.17)
+
+428 automated tests pass, including twenty new concept-search/integration cases. The authored twelve-query bilingual fixture retrieves intended notes with no word-only hits; it is not an independent semantic-quality benchmark. Synthetic browser acceptance verified related-word search, word-only controls, exact evidence, unchecked link proposals and explicit approval, stale-result invalidation, light/dark presentation. No providers, model downloads, real vaults or Obsidian processes were used. See [implementation and limitations](CONCEPT-SEARCH.md).

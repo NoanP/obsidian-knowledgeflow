@@ -1,4 +1,4 @@
-# Reviewed connection suggestions (1.12)
+# Reviewed connection suggestions (1.17)
 
 ## Workflow
 
@@ -12,7 +12,7 @@ Approved connections are shown on the inbox card and in the conversion/publicati
 
 Only unambiguous published notes in KnowledgeFlow/Wissen/Seiten can be targets. Sources, inbox notes, review drafts, archived notes, outside vault files and duplicate IDs are excluded. The source must be an open owned personal note or a review draft in its proper folder. An update draft does not propose a connection to the page it updates.
 
-The matcher compares normalized German/English word forms in titles and the first 20,000 body characters. Tokens longer than 64 normalized characters are ignored. It removes common stopwords, code examples, comments, generated connection sections and existing link syntax. At least two distinct shared terms are required, including one with at least five normalized characters. Shared title terms and rarer terms improve the ordering; a shared project is only a small tie aid after textual overlap exists. Tags/projects alone never generate a candidate. No embedding, similarity percentage, semantic relationship or factual agreement is asserted.
+The matcher compares normalized German/English word forms in titles and the first 20,000 body characters. Tokens longer than 64 normalized characters are ignored. It removes common stopwords, code examples, comments, generated connection sections and existing link syntax. At least two distinct shared word/concept features are required, including one key of at least five characters. Bundled German/English concept groups map related wording (e.g. Datensicherung/Backup); synonyms in the same group count once. [Concept matching and limitations](CONCEPT-SEARCH.md). Shared title terms and rarer terms improve the ordering; a shared project is only a small tie aid after textual overlap exists. Tags/projects alone never generate a candidate. No embedding model, similarity percentage, confirmed semantic relationship or factual agreement is asserted. Paired literal words expose the matching basis.
 
 Existing forward/reverse related IDs and explicit wiki/Markdown connections suppress redundant suggestions. Candidates are ordered deterministically. Matching is bounded to 400 published records, two million total target body characters and eight displayed suggestions. Per-text matching truncation, omitted/ambiguous targets and additional qualifying matches are disclosed. Long or late-alphabet notes may remain unchecked; a fresh request is not an exhaustive semantic search. Full original target bodies are charged to this scan budget for existing-link checks; the existing owned knowledge refresh still reads its normal collection.
 
