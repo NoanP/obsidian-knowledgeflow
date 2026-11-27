@@ -1,5 +1,7 @@
 # Selected-source import (1.5)
 
+For PDF files, durable staging and local scan OCR, use the separate [File inbox added in 1.19](FILE-INBOX.md). The selected-source importer described below retains its existing text/chat formats.
+
 ## Use
 
 Open **Wissen & Quellen → Quellen importieren**. Search and select note filenames or choose export files. Note bodies are read only when you request a preview; filename listing uses vault metadata. Hidden paths and KnowledgeFlow's own knowledge folders are excluded from note selection. The plugin never automatically imports TaskFlow or any other vault content.
@@ -22,7 +24,7 @@ A chat source body is canonical, key-sorted JSON for the **selected conversation
 
 The readable ChatGPT view shows the active branch. Other branches stay in the JSON snapshot and can appear in the raw source supplied to a later explicitly requested AI work prompt. Claude and exchange-format views retain message order. Non-text content is retained as JSON metadata when present; attachments, images, linked pages, voice and other external files are not loaded. Unsupported conversations get explicit error rows; valid conversations can be selected independently. Invalid JSON rejects that file, not unrelated valid inputs.
 
-ZIP, HTML, PDF, Gemini exports and arbitrary JSON/message schemas are outside this release. Extract ZIPs and select conversation JSON files, including separate numbered files where applicable. No provider login, export download or account access is added.
+ZIP, HTML, PDF, Gemini exports and arbitrary JSON/message schemas are outside this selected-source importer. PDF support is in the separate File inbox. Extract ZIPs and select conversation JSON files, including separate numbered files where applicable. No provider login, export download or account access is added.
 
 The provider help pages confirm export availability but do not define a stable JSON schema; adapters here cover the structures above and synthetic test fixtures, not every historical/future export:
 - [OpenAI export help](https://help.openai.com/en/articles/7260999-exporting-your-chatgpt-history-and-data)

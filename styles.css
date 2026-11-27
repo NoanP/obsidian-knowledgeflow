@@ -751,3 +751,6 @@
 
 /* Local inference controls inherit the vault theme. */
 .kf-embedding-setup{margin:16px 0;padding:12px 16px;border:1px solid var(--kf-line);border-radius:8px;max-width:1100px}.kf-embedding-setup summary{cursor:pointer;font-weight:600}.kf-embedding-setup p{font-size:12px;line-height:1.7;color:var(--kf-quiet)}.kf-embedding-setup code{display:block;padding:8px;overflow-wrap:anywhere}.kf-embedding-setup button{margin:4px 8px 8px 0}.kf-embedding-setup label{display:flex;flex-wrap:wrap;align-items:center;gap:12px;font-size:12px}.kf-embedding-setup select{padding:6px;background:var(--background-secondary);color:var(--kf-ink);border:1px solid var(--kf-line);border-radius:6px}
+
+/* File inbox stays within the active vault theme. */
+.kf-file-inbox>p{line-height:1.7}.kf-file-drop{padding:24px;margin:16px 0;border:1px dashed var(--kf-line);border-radius:10px;background:var(--background-secondary)}.kf-file-drop p{margin-top:0;color:var(--kf-quiet)}.kf-file-drop input{max-width:100%}.kf-file-page{margin:12px 0;padding:12px;border:1px solid var(--kf-line);border-radius:8px}.kf-file-page summary{cursor:pointer;font-weight:600}.kf-file-inbox .kf-kb-card h3{overflow-wrap:anywhere}

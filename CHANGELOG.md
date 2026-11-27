@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-11-27
+
+### Added
+- Durable local File inbox for PDF/TXT/MD originals, filename/status filtering, original download and explicit reviewed source capture.
+- PDF.js text extraction and optional separately installed local Tesseract OCR, per-page method/text preview, language/mode controls and cancellation.
+- Original byte hashing and extracted-source duplicate checks at preview/approval; provenance, date basis, page maps and acceptance receipts.
+- Narrow journaled staging/acceptance, immutable originals/sources, restart/idempotency checks, quarantine and frozen recovery without rerunning OCR.
+
+### Validation and scope
+- 486 automated tests pass, including 30 new file cases. Fixed multi-file staging across view rerenders.
+- Actual PDF.js/Tesseract LSTM WASM tests read a two-page text PDF and an image-only German scan; synthetic fixtures only. Native Obsidian/Tesseract and broad OCR accuracy remain unvalidated.
+- Browser simulated PDF/OCR verifies preview/approval, status, cancellation and search gates in light/dark. Additional file-chooser automation timed out; picker/drop delivery is not certified.
+- No automatic installation, model download, cloud request, watched external folder or pre-approval indexing. Original envelope/journal storage overhead and limits documented; OCR needs separate desktop Tesseract/language setup.
+- KnowledgeFlow repository only. TaskFlow and existing Obsidian systems remain unchanged.
+
 ## [1.18.0] - 2026-11-27
 
 ### Added

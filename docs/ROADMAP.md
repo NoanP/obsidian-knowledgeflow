@@ -24,6 +24,7 @@
 
 | 1.15 | Live weekly knowledge review: dated published insights, current inbox/approval backlog and verified workflow entry points |
 
+| 1.19 | Durable file inbox, reviewed PDF/text extraction and local OCR, exact binary/text duplicate checks, original recovery and acceptance receipts |
 | 1.18 | Explicit local neural embedding search, bounded memory index, free paraphrases, model/corpus checks and exact original evidence |
 | 1.17 | Local concept-expanded search and reviewed link matching, word-only mode, pinned explanations and backward-compatible recovery |
 | 1.16 | Rediscovery with explicit importance/review/snooze/hide feedback, durable journaled metadata and age-based selection |

@@ -1,0 +1,32 @@
+{
+  "engine": "PDF.js + Tesseract.js WASM test adapter",
+  "results": [
+    {
+      "name": "digital.pdf",
+      "pages": [
+        {
+          "number": 1,
+          "method": "pdf-text",
+          "text": "KnowledgeFlow - Synthetic PDF\nRead documents locally before approval."
+        },
+        {
+          "number": 2,
+          "method": "pdf-text",
+          "text": "Page two: duplicate checks preserve originals."
+        }
+      ]
+    },
+    {
+      "name": "scan.pdf",
+      "pages": [
+        {
+          "number": 1,
+          "method": "ocr",
+          "text": "KnowledgeFlow Datei-Inbox\n\nDies ist ein gescanntes Dokument.\n\nSichere Ablage und Freigabe vor Aufnahme.\nOriginale bleiben unveraendert erhalten."
+        }
+      ]
+    }
+  ],
+  "scope": "Synthetic fixtures; actual PDF.js 5.6.205 / Tesseract.js 7.0.0 WASM, not native Obsidian/Tesseract CLI certification.",
+  "date": "2026-11-27"
+}

@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.18
+# KnowledgeFlow 1.19
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.19: reviewed file inbox with PDFs and local OCR
+
+Open **Wissen & Quellen → Datei-Inbox** or the **Datei-Inbox öffnen** command. Drop PDF/TXT/MD files or choose them with the file picker. Originals are durably staged locally and remain outside knowledge/search until you explicitly create a preview, inspect the extracted pages, check **Erkannten Text geprüft** and choose **Geprüften Text aufnehmen**. Byte-identical originals and identical extracted source texts are checked separately. Accepted files remain available with their original download and source link.
+
+PDF text uses Obsidian's bundled PDF.js. Scanned pages can use separately installed local **Tesseract** and language data; no automatic installation, cloud service or inference request is introduced. Automatic/text-only/force-OCR modes, German/English choices, cancellation, provenance, page mapping and journal recovery are included. [Workflow, OCR setup, storage overhead and limits](docs/FILE-INBOX.md).
 
 ## New in 1.18: local neural semantic search
 

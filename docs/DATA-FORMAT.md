@@ -62,3 +62,7 @@ Personal notes may carry `noteKind: page|meeting|case|decision`; the record kind
 ## Topic hubs (1.14)
 
 Hubs introduce no persistent record, setting or file schema. The view derives tag/area/project groupings from published owned pages and valid source snapshots, retaining existing exact source references. A view-local lexical query is transient. Question citations keep full-record hashes and original body/annotation/active-transcript offsets. All membership and source grouping is read-only.
+
+## File inbox (1.19)
+
+DateiInbox envelopes/acceptance receipts are internal Markdown records explicitly excluded from the knowledge scan. Original envelopes contain canonical base64 bytes and hashes; acceptance writes a frozen extracted source with exact page offsets and an independent reference receipt. Never index the base64 payload or treat these inbox records as knowledge. [Storage overhead, identity, recovery and bounds](FILE-INBOX.md).
