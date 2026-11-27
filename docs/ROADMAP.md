@@ -22,6 +22,8 @@
 
 | 1.14 | Read-only automatic topic hubs for published notes, decisions, exact sources and literal open questions, with lexical exploration and verified passages |
 
+| 1.15 | Live weekly knowledge review: dated published insights, current inbox/approval backlog and verified workflow entry points |
+
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |

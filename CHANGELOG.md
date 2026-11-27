@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-11-27
+
+### Added
+- Live weekly knowledge review with separate new/updated published knowledge and current open-inbox/pending-approval backlogs.
+- Local Monday–Sunday calendar selection, project filtering, manual/normal-scan refresh and direct verified original/inbox-assistant/draft-review actions.
+- Global interrupted-change/unreadable-file alerts and access to change log/knowledge quality. Missing dates, ambiguous identities and processing limits remain visible.
+
+### Validation and scope
+- 395 automated tests pass, including week/year/DST ranges, date boundaries, backlog scope, no-write refresh, malformed/missing dates, project isolation, ownership, duplicates, stale actions, forged references and bounds.
+- Read-only, on-demand view. No automatic acknowledgment, approval, scheduled reminder, generated summary, provider call or saved historical report.
+- Repository-only release. TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.14.0] - 2026-11-27
 
 ### Added

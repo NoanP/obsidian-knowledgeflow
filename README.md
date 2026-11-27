@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.14
+# KnowledgeFlow 1.15
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.15: weekly knowledge review
+
+Open **Wissen & Quellen → Wissensdurchsicht / Knowledge & sources → Weekly review**, or the dedicated command. Pick a week and optional project to see newly created and updated published knowledge, your current open note inbox and pending review drafts. The view links to original notes, the inbox assistant, draft approval and knowledge quality checks. Interrupted changes and unreadable files are surfaced separately.
+
+This is a live read-only overview, not a saved historical report or scheduled reminder. Dates use the device's local calendar, Monday through Sunday. Inbox/approval backlog is always current, even when an earlier week is selected. No item is automatically changed, acknowledged, published or sent to AI. [Workflow and limits](docs/WEEKLY-REVIEW.md).
 
 ## New in 1.14: automatic topic hubs
 
