@@ -58,3 +58,7 @@ Accepted suggestions use the existing `related` page-ID array on open inbox note
 ## Inbox assistant (1.13)
 
 Personal notes may carry `noteKind: page|meeting|case|decision`; the record kind stays page and the knowledge type is applied only during later conversion. Approved topics use the existing tags array. `inboxAssist` stores the latest approval identity/time. Optional `inboxSplit` and child `inboxOrigin` store exact creation offsets, original record/body hashes and stable child identities. The inbox-assist journal includes frozen origin/patch/selected target snapshots/section specifications; the validator reconstructs the exact allowed output and preserves original bodies. No proposal file is saved on analysis or preview.
+
+## Topic hubs (1.14)
+
+Hubs introduce no persistent record, setting or file schema. The view derives tag/area/project groupings from published owned pages and valid source snapshots, retaining existing exact source references. A view-local lexical query is transient. Question citations keep full-record hashes and original body/annotation/active-transcript offsets. All membership and source grouping is read-only.

@@ -20,6 +20,8 @@
 
 | 1.13 | Local inbox assistant with selective metadata/link proposals, full change preview, explicit approval and optional exact section copies |
 
+| 1.14 | Read-only automatic topic hubs for published notes, decisions, exact sources and literal open questions, with lexical exploration and verified passages |
+
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |

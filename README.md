@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.13
+# KnowledgeFlow 1.14
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.14: automatic topic hubs
+
+Open **Wissen & Quellen → Themenzentralen / Knowledge & sources → Topic hubs**, or the command **Themenzentralen öffnen / Open topic hubs**. Existing tags, areas and project assignments form automatic hubs. Each gathers matching published notes, explicit decisions, exact referenced sources and literally marked open questions/points, with reasons and verified original passages.
+
+Explore an additional free-text topic or restrict the view to a project. Changes to the owned knowledge collection refresh the hubs through the normal scan; **Themen neu laden / Reload topics** checks immediately. Views are read-only: no retagging, new connections, generated summaries, provider requests or source edits. Custom term queries apply in the current view; durable hubs follow existing note properties. [Grouping, question rules, limits and scope](docs/TOPIC-HUBS.md).
 
 ## New in 1.13: inbox assistant with full change review
 

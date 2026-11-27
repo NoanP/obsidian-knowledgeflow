@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-27
+
+### Added
+- Read-only topic hubs derived from existing tags, areas and projects, plus view-local custom term exploration and a project filter.
+- Automatic grouped published notes, explicit decisions, exact referenced source revisions and literal open questions/points, with membership explanations and verified direct original passages.
+- Source deduplication, precise archived-source references, active chat-branch containment, ambiguous identity exclusion and stale-evidence rejection.
+- Cached bounded topic indexing, local sidebar filtering, pagination, disclosed limits and normal-scan/manual refresh. A dedicated command opens the hub view.
+
+### Validation and scope
+- 383 automated tests pass, including read-only grouping, automatic membership changes, exact source/CRLF evidence, open/completed question rules, chat containment, duplicate exclusions, project scoping, cache invalidation, stale references and disclosed limits.
+- No generated content, retagging, inferred graph edges, provider call, task creation, migration or installation. Custom queries remain view-local; durable hubs follow existing reviewed note properties.
+- Repository-only release. TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.13.0] - 2026-11-27
 
 ### Added
