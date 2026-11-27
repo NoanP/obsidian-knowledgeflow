@@ -54,3 +54,7 @@ The envelope is plaintext local state, protected against accidental corruption/s
 ## Reviewed links (1.12)
 
 Accepted suggestions use the existing `related` page-ID array on open inbox notes/review drafts, with only `updated` additionally changed. A `link-approve` journal contains `linkApproval` with origin hash and selected full target snapshots/hashes/matching evidence, target read dependencies, one origin write, one before-history write and one audit write. The validator constrains this shape; recovery checks pinned target versions. No new note kind or background proposal file is introduced.
+
+## Inbox assistant (1.13)
+
+Personal notes may carry `noteKind: page|meeting|case|decision`; the record kind stays page and the knowledge type is applied only during later conversion. Approved topics use the existing tags array. `inboxAssist` stores the latest approval identity/time. Optional `inboxSplit` and child `inboxOrigin` store exact creation offsets, original record/body hashes and stable child identities. The inbox-assist journal includes frozen origin/patch/selected target snapshots/section specifications; the validator reconstructs the exact allowed output and preserves original bodies. No proposal file is saved on analysis or preview.

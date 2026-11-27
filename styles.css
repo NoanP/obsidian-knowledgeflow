@@ -708,3 +708,21 @@
 .kf-approved-links summary{cursor:pointer;color:var(--text-muted);font-size:12px}
 .kf-approved-links p{font-size:13px;margin:6px 0}
 @media(max-width:600px){.kf-link-evidence{grid-template-columns:minmax(0,1fr)}}
+
+/* Reviewed inbox organization, using neutral Obsidian surfaces. */
+.kf-inbox-assistant{line-height:1.6}
+.kf-inbox-assistant button{background:var(--background-secondary)!important;color:var(--text-normal)!important;border:1px solid var(--background-modifier-border)!important}
+.kf-inbox-assistant button:hover{background:var(--background-modifier-hover,var(--background-primary))!important}
+.kf-inbox-assistant button:disabled{opacity:.5;cursor:default}
+.kf-inbox-assistant .kf-kb-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.kf-assist-section{padding:18px 0;border-bottom:1px solid var(--background-modifier-border)}
+.kf-assist-section .kf-kb-check{display:flex;align-items:flex-start;gap:9px;margin:10px 0;cursor:pointer}
+.kf-assist-section input[type=checkbox]{margin-top:5px;flex-shrink:0}
+.kf-assist-section input[type=text],.kf-assist-section select{max-width:100%;width:100%;box-sizing:border-box}
+.kf-assist-link{padding:9px 0;overflow-wrap:anywhere}
+.kf-assist-link summary{cursor:pointer}
+.kf-assist-link blockquote{white-space:pre-wrap;overflow-wrap:anywhere;border-left:2px solid var(--background-modifier-border);padding-left:12px;margin:8px 0;font-size:13px}
+.kf-assist-diff{width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.kf-assist-diff th,.kf-assist-diff td{padding:10px 8px;border-bottom:1px solid var(--background-modifier-border);text-align:left;vertical-align:top;overflow-wrap:anywhere}
+.kf-inbox-assistant details{margin:12px 0}
+.kf-inbox-assistant summary{cursor:pointer}

@@ -52,3 +52,7 @@ Capture/edit/archive/restore/conversion are journaled. A conversion plan include
 ## Reviewed connections (1.12)
 
 A link-approve plan can change only the origin related IDs and updated time, with one history and audit record. Selected published target snapshots are hash-pinned read dependencies, never writes. Pending approvals quarantine the origin. A changed target/origin blocks explicit recovery; identical persisted output is reused. After success an identical retry adds no copy. See [link suggestion workflow](LINK-SUGGESTIONS.md).
+
+## Inbox assistant (1.13)
+
+Metadata, selected connections and optional exact section copies are one constrained inbox-assist operation. Pending outputs, including partially created children, are quarantined. Explicit recovery resumes only pinned outputs and refuses changed original/target/child files. Before-state history retains the original complete record. Repeated identical completed approvals reuse stable identities; an edited child blocks that old retry. Recovery validates stored snapshots independently of later suggestion-rule changes.

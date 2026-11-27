@@ -35,3 +35,7 @@ Repository-only delivery with automated tests and the synthetic in-memory browse
 ## Reviewed link suggestions (1.12)
 
 Open notes can explicitly request related-note candidates, inspect exact passages and approve individual connections. Nothing is preselected or applied on opening. Approved related IDs survive conversion into a review draft, with graph edges visible only after separate publication. See [matching and recovery](LINK-SUGGESTIONS.md).
+
+## Inbox assistant (1.13)
+
+Open personal notes now offer an Inbox assistant with local title, future note type, topic and connection proposals, all unchecked. A separate complete change preview precedes explicit approval. Optional section copies preserve the exact original and retain creation provenance. Note type/topics/relations carry into the separately approved knowledge draft. See [the complete workflow](INBOX-ASSISTANT.md).

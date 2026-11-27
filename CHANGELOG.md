@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-11-27
+
+### Added
+- Inbox assistant for open personal notes with local title/type/topic suggestions, explanations and existing related-note candidates. All choices start unchecked.
+- A separate complete before/after preview and explicit approval step. Analysis, selection, preview and cancellation do not persist proposals or edits.
+- Optional exact section copies for structured longer notes; originals stay intact, children retain creation provenance and stable identities prevent repeat copies.
+- Strict inbox-assist journal plans with original/target pins, retained before-state history, stale/conflicting approval rejection and explicit interrupted-write recovery.
+- Assisted type/topics/connections carry into a separately reviewed knowledge draft; topic search includes stored tags.
+
+### Validation and scope
+- 360 automated tests pass, including read-only previews, selective changes, exact CRLF text and metadata preservation, Unicode tags, type rules, optional split coverage, idempotency, collisions, stale targets, interruptions, reviewed recovery and forged-plan rejection.
+- Suggestions are local structural/word rules. No automatic AI request, publishing, task creation or installation. Repository-only release; TaskFlow and all existing Obsidian systems remain unchanged.
+
 ## [1.12.0] - 2026-11-26
 
 ### Added

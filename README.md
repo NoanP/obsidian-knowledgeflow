@@ -1,8 +1,14 @@
-# KnowledgeFlow 1.12
+# KnowledgeFlow 1.13
 
 A local Markdown workspace connecting sources, reviewed knowledge and everyday work in Obsidian. An independent project derived from [TaskFlow 0.17.3](https://github.com/NoanP/obsidian-taskflow/tree/468af48c96bb9a4c87a5443c426d49937b1998d4).
 
 **This repository does not update TaskFlow or install anything in Obsidian.** The plugin uses a distinct identity and an independent `KnowledgeFlow/` folder. There is no automatic migration or reading of TaskFlow tasks/settings. Keep using the existing installation unchanged until you explicitly choose a separate test.
+
+## New in 1.13: inbox assistant with full change review
+
+Choose **Inbox-Assistent / Inbox assistant** on an open personal inbox note. The local assistant suggests a title, note type, topics and related published notes with explanations. Everything starts unchecked. You can edit the proposed title/type, select useful topics/connections and optionally create additional notes from explicit Markdown sections. **Änderungsvorschau öffnen / Open change preview** shows the complete proposed changes without saving anything; only **Geprüfte Änderungen freigeben / Approve reviewed changes** commits them.
+
+The original text, existing topics, project, annotations and unknown metadata remain intact. Optional section notes are exact slices of the original, with source offsets and stable identities, and never replace it. Type/topics/connections carry through to a separately reviewed knowledge draft. All changes use pinned, recoverable journal operations, with no automatic AI call, publication or task creation. [Workflow, rules, limits and recovery](docs/INBOX-ASSISTANT.md).
 
 ## New in 1.12: reviewed connection suggestions
 

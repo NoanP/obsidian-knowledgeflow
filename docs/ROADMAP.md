@@ -18,6 +18,8 @@
 
 | 1.12 | Local, explainable and explicitly approved link suggestions for new inbox notes and review drafts, with pinned recovery |
 
+| 1.13 | Local inbox assistant with selective metadata/link proposals, full change preview, explicit approval and optional exact section copies |
+
 The following are candidates, subject to user approval rather than automatic implementation:
 
 | Next stage | Goal | Gate |
